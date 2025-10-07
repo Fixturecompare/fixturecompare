@@ -6,11 +6,11 @@ export async function GET(
 ) {
   try {
     const { leagueCode } = params
-    const apiToken = process.env.NEXT_PUBLIC_FOOTBALL_API_TOKEN
+    const apiToken = process.env.FOOTBALL_API_TOKEN || process.env.NEXT_PUBLIC_FOOTBALL_API_TOKEN
 
     if (!apiToken) {
       return NextResponse.json(
-        { error: 'API token not configured' },
+        { error: 'API token not configured. Please set FOOTBALL_API_TOKEN (preferred) or NEXT_PUBLIC_FOOTBALL_API_TOKEN.' },
         { status: 500 }
       )
     }

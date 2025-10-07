@@ -8,10 +8,20 @@ export async function GET(
 ) {
   const { leagueCode } = params
   
+  // Resolve API token from environment (prefer server-only secret if set)
+  const apiToken = process.env.FOOTBALL_API_TOKEN || process.env.NEXT_PUBLIC_FOOTBALL_API_TOKEN
+
+  if (!apiToken) {
+    return NextResponse.json(
+      { error: 'API token not configured. Please set FOOTBALL_API_TOKEN (preferred) or NEXT_PUBLIC_FOOTBALL_API_TOKEN.' },
+      { status: 500 }
+    )
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/competitions/${leagueCode}/teams`, {
       headers: {
-        'X-Auth-Token': process.env.NEXT_PUBLIC_FOOTBALL_API_TOKEN!,
+        'X-Auth-Token': apiToken,
         'Content-Type': 'application/json',
       },
     })
@@ -40,3 +50,4 @@ export async function GET(
     )
   }
 }
+
