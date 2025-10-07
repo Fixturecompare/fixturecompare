@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/predictions-live", "permanent": true }
+  ]
+}
