@@ -10,6 +10,7 @@ export async function GET(
   
   // Resolve API token from environment (prefer server-only secret if set)
   const apiToken = process.env.FOOTBALL_API_TOKEN || process.env.NEXT_PUBLIC_FOOTBALL_API_TOKEN
+  console.log("🔍 Using API token (partial):", apiToken ? `${apiToken.slice(0,5)}...${apiToken.slice(-5)}` : "none")
 
   if (!apiToken) {
     return NextResponse.json(
