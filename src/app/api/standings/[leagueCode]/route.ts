@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const TTL_MS = 60 * 60 * 1000 // 60 minutes
+type CacheEntry = { data: any; expires: number }
+const cache: Map<string, CacheEntry> = new Map()
+
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+async function fetchWithRetry(url: string, init: RequestInit, attempts = 2) {
+  let lastError: any
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, init)
+      if (!res.ok) return res
+      return res
+    } catch (err) {
+      lastError = err
+    }
+    await delay(i === 0 ? 200 : 500)
+  }
+  throw lastError
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { leagueCode: string } }
@@ -15,7 +36,17 @@ export async function GET(
       )
     }
 
-    const response = await fetch(
+    // Serve cache if fresh
+    const cacheKey = leagueCode
+    const now = Date.now()
+    const cached = cache.get(cacheKey)
+    if (cached && cached.expires > now) {
+      return NextResponse.json({
+        standings: [{ table: cached.data }]
+      }, { headers: { 'x-cache': 'hit' } })
+    }
+
+    const response = await fetchWithRetry(
       `https://api.football-data.org/v4/competitions/${leagueCode}/standings`,
       {
         headers: {
@@ -25,7 +56,22 @@ export async function GET(
     )
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      let upstreamMessage = ''
+      try {
+        const maybeJson = await response.json()
+        upstreamMessage = maybeJson?.message || JSON.stringify(maybeJson)
+      } catch {
+        try { upstreamMessage = await response.text() } catch { upstreamMessage = '' }
+      }
+      console.error(`❌ Upstream standings error: status=${response.status} ${response.statusText} message=${upstreamMessage}`)
+      if (cached) {
+        console.warn('⚠️ Serving stale standings cache due to upstream error')
+        return NextResponse.json({ standings: [{ table: cached.data }] }, { headers: { 'x-cache': 'stale' } })
+      }
+      return NextResponse.json(
+        { error: 'Upstream standings request failed', status: response.status },
+        { status: 502 }
+      )
     }
 
     const data = await response.json()
@@ -50,11 +96,12 @@ export async function GET(
       goalDifference: team.goalDifference
     }))
 
+    // Update cache
+    cache.set(cacheKey, { data: transformedStandings, expires: now + TTL_MS })
+
     return NextResponse.json({
-      standings: [{
-        table: transformedStandings
-      }]
-    })
+      standings: [{ table: transformedStandings }]
+    }, { headers: { 'x-cache': cached ? 'refresh' : 'miss' } })
   } catch (error) {
     console.error('Error fetching standings:', error)
     return NextResponse.json(
@@ -63,3 +110,4 @@ export async function GET(
     )
   }
 }
+
