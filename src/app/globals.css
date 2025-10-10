@@ -6,8 +6,8 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --background-start-rgb: 234, 243, 255; /* #EAF3FF */
+  --background-end-rgb: 245, 250, 255;   /* #F5FAFF */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,14 +31,22 @@ body {
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
+    @apply bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] animate-slide-up;
   }
   
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95;
+    @apply text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 bg-gradient-to-r from-accentBlue to-accentGreen;
   }
   
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-primary-600 font-semibold py-3 px-6 rounded-lg border-2 border-primary-600 transition-all duration-200 transform hover:scale-105 active:scale-95;
+    @apply bg-white hover:bg-gray-50 text-[#1E66AD] font-semibold py-3 px-6 rounded-lg border border-[#A9D0FF] transition-all duration-200 transform hover:scale-105 active:scale-95;
   }
+}
+
+@layer utilities {
+  /* Global background shortcut */
+  .bg-background { @apply bg-gradient-to-b from-skyBaseStart to-skyBaseEnd; }
+  .bg-surface { @apply bg-white; }
+  .bg-accent-gradient { @apply bg-gradient-to-r from-accentBlue to-accentGreen; }
+  .animate-fadeInUp { @apply animate-slide-up; }
 }

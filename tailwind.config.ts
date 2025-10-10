@@ -9,18 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Keep existing names but shift usage to new accents in components
         primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
+          50: '#F5FAFF', // lightest background target
+          100: '#EAF3FF',
+          200: '#DCEBFF',
+          300: '#C7E0FF',
+          400: '#A9D0FF',
+          500: '#8BC0FF',
+          600: '#6AAEFF',
+          700: '#4A99F0',
+          800: '#2E7ED1',
+          900: '#1E66AD',
+          950: '#154D83',
         },
         secondary: {
           50: '#fafafa',
@@ -35,6 +36,11 @@ const config: Config = {
           900: '#18181b',
           950: '#09090b',
         },
+        accentBlue: '#0070F3',
+        accentGreen: '#00C49A',
+        // Darker, richer base so white cards pop
+        skyBaseStart: '#D7E6FA',
+        skyBaseEnd: '#C5E0FA',
       },
       fontFamily: {
         // Base font: Inter via next/font variable
@@ -44,7 +50,9 @@ const config: Config = {
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
+        'fade-in-slow': 'fadeIn 0.75s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
+        'slide-up-slow': 'slideUp 0.75s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
       },
       keyframes: {
@@ -66,3 +74,4 @@ const config: Config = {
   plugins: [],
 }
 export default config
+

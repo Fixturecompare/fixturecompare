@@ -107,7 +107,7 @@ export default function PredictiveFixtureCard({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-1.5 transition-all duration-300 hover:shadow-md hover:border-gray-300">
+    <div className="bg-white rounded-lg border border-[#A9D0FF] p-1.5 transition-all duration-300 shadow-lg hover:shadow-xl hover:border-accentBlue animate-slide-up-slow">
       {/* Header Row */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center space-x-1 text-xs text-gray-500">

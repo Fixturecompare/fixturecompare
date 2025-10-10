@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="en">
       {/* Attach font variables and use Tailwind base font */}
       <body className={`${inter.variable} ${montserrat.variable} font-sans`}>
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white">
+        <div className="min-h-screen bg-background">
           {children}
         </div>
       </body>
