@@ -38,9 +38,10 @@ const config: Config = {
         },
         accentBlue: '#0070F3',
         accentGreen: '#00C49A',
-        // Darker, richer base so white cards pop
-        skyBaseStart: '#D7E6FA',
-        skyBaseEnd: '#C5E0FA',
+        // Darker professional blue background for stronger contrast
+        // Start (top) -> End (bottom)
+        skyBaseStart: '#C2D8FF',
+        skyBaseEnd: '#EAF3FF',
       },
       fontFamily: {
         // Base font: Inter via next/font variable
