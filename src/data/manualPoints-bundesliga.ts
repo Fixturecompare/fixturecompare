@@ -1,0 +1,20 @@
+export const manualPoints: Record<string, number> = {
+  "Bayern Munich": 18,
+  "Borussia Dortmund": 14,
+  "RasenBallsport Leipzig": 13,
+  "VfB Stuttgart": 12,
+  "Bayer Leverkusen": 11,
+  "FC Cologne": 10,
+  "Eintracht Frankfurt": 9,
+  "Freiburg": 8,
+  "Hamburger SV": 8,
+  "St. Pauli": 7,
+  "Hoffenheim": 7,
+  "Werder Bremen": 7,
+  "Union Berlin": 7,
+  "Augsburg": 6,
+  "Wolfsburg": 5,
+  "Mainz 05": 4,
+  "Borussia M.Gladbach": 3,
+  "FC Heidenheim": 3
+};

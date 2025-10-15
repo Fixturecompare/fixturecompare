@@ -48,11 +48,13 @@ export default function PredictiveFixtureCard({
     onPredictionChange?.(fixture.id, newPrediction)
   }
 
-  const getTeamInitial = (teamName: string) => {
-    return teamName.charAt(0).toUpperCase()
+  const getTeamInitial = (teamName?: string) => {
+    const s = (teamName || 'Unknown').trim()
+    return s ? s.charAt(0).toUpperCase() : 'U'
   }
 
-  const truncateTeamName = (name: string, maxLength: number = 20) => {
+  const truncateTeamName = (name?: string, maxLength: number = 20) => {
+    if (!name) return 'Unknown'
     return name.length > maxLength ? name.substring(0, maxLength) + '...' : name
   }
 
@@ -84,7 +86,7 @@ export default function PredictiveFixtureCard({
     }
   }
 
-  const TeamCrest = ({ src, teamName, isOpponent = false }: { src?: string, teamName: string, isOpponent?: boolean }) => {
+  const TeamCrest = ({ src, teamName, isOpponent = false }: { src?: string, teamName?: string, isOpponent?: boolean }) => {
     const hasError = isOpponent ? opponentCrestError : teamCrestError
     const setError = isOpponent ? setOpponentCrestError : setTeamCrestError
     

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Header from '@/components/Header'
 import Dropdown from '@/components/Dropdown'
 import PredictiveFixtureCard, { PredictionType, FixtureData } from '@/components/PredictiveFixtureCard'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import ErrorMessage from '@/components/ErrorMessage'
 import { getTeams, getFixtures } from '@/lib/footballApi'
+import { getManualPoints } from '@/utils/getManualPoints'
 
 interface Team {
   id: number
@@ -49,6 +50,41 @@ export default function LivePredictionsPage() {
     teamBFixtures: ''
   })
 
+  // League-specific manual points map (PL, PD, SA, BL1, FL1)
+  const leaguePointsMap = getManualPoints(selectedLeague)
+
+  // Build a normalized lookup map for robust matching
+  const normalizeName = (s: string): string => {
+    const lower = (s || '').toLowerCase()
+    // remove diacritics
+    const noDia = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    // replace symbols and punctuation
+    const cleaned = noDia
+      .replace(/[.&',]/g, ' ') // dots, ampersands, apostrophes, commas
+      .replace(/-/g, ' ')
+      .replace(/\s+fc$/i, '') // trailing FC
+      .replace(/^afc\s+/i, '') // leading AFC
+      .replace(/^as\s+/i, '') // leading AS (e.g., AS Monaco)
+      .replace(/^ac\s+/i, '') // leading AC
+      .replace(/^rc\s+/i, '') // leading RC
+      .replace(/^ud\s+/i, '') // leading UD
+      .replace(/\bcalcio\b/g, '')
+      .replace(/\bclub\b/g, '')
+      .replace(/\bfutbol\b/g, '')
+      .replace(/\bsporting\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return cleaned
+  }
+
+  const normalizedPointsMap = useMemo(() => {
+    const m = new Map<string, number>()
+    Object.entries(leaguePointsMap || {}).forEach(([name, pts]) => {
+      m.set(normalizeName(name), pts as number)
+    })
+    return m
+  }, [leaguePointsMap])
+
   // Load teams when league changes
   useEffect(() => {
     if (selectedLeague) {
@@ -82,7 +118,8 @@ export default function LivePredictionsPage() {
     
     try {
       const teams = await getTeams(leagueCode)
-      setAvailableTeams(teams as Team[])
+      const sorted = ([...(teams as Team[])]).sort((a, b) => a.name.localeCompare(b.name))
+      setAvailableTeams(sorted)
     } catch (error) {
       setErrors(prev => ({ ...prev, teams: 'Failed to load teams. Please try again.' }))
       console.error('Error loading teams:', error)
@@ -145,8 +182,76 @@ export default function LivePredictionsPage() {
     }, 0)
   }
 
+  const resolveManualPoints = (name?: string): number => {
+    if (!name) return 0
+    const norm = normalizeName(name)
+    const direct = normalizedPointsMap.get(norm)
+    if (typeof direct === 'number') return direct
+
+    // alias mapping (normalized -> normalized target)
+    const aliasToTarget = new Map<string, string>()
+    const alias = (from: string, to: string) => aliasToTarget.set(normalizeName(from), normalizeName(to))
+
+    // Cross-league common aliases
+    alias('Man City', 'Manchester City')
+    alias('Man United', 'Manchester United')
+    alias('Manchester Utd', 'Manchester United')
+    alias('Newcastle', 'Newcastle United')
+    alias('West Ham', 'West Ham United')
+    alias('Wolves', 'Wolverhampton Wanderers')
+    alias('Brighton Hove Albion', 'Brighton')
+    alias('Tottenham', 'Tottenham Hotspur')
+    alias('Bournemouth', 'AFC Bournemouth')
+
+    // La Liga
+    alias('Real Sociedad de Futbol', 'Real Sociedad')
+
+    // Bundesliga
+    alias('RB Leipzig', 'RasenBallsport Leipzig')
+    alias('1. FC Koln', 'FC Cologne')
+    alias('Koln', 'FC Cologne')
+    alias('Borussia Monchengladbach', 'Borussia M.Gladbach')
+    alias('1. FC Heidenheim 1846', 'FC Heidenheim')
+    alias('St Pauli', 'St. Pauli')
+
+    // Serie A
+    alias('FC Internazionale Milano', 'Inter')
+    alias('Internazionale', 'Inter')
+    alias('US Sassuolo Calcio', 'Sassuolo')
+    alias('Udinese Calcio', 'Udinese')
+    alias('Hellas Verona', 'Verona')
+    alias('Genoa CFC', 'Genoa')
+    alias('Pisa Sporting Club', 'Pisa')
+
+    // Ligue 1
+    alias('Paris Saint-Germain', 'Paris Saint Germain')
+    alias('Olympique de Marseille', 'Marseille')
+    alias('AS Monaco FC', 'Monaco')
+    alias('RC Lens', 'Lens')
+    alias('Stade Brestois 29', 'Brest')
+    alias('Le Havre AC', 'Le Havre')
+
+    const target = aliasToTarget.get(norm)
+    if (target) {
+      const v = normalizedPointsMap.get(target)
+      if (typeof v === 'number') return v
+    }
+
+    return 0
+  }
+
+  
+
+  const resolveBasePoints = (name?: string): number => {
+    return resolveManualPoints(name)
+  }
+
+  // Predicted additional points from user selections
   const teamAPredictionPoints = calculatePoints(teamAFixtures)
   const teamBPredictionPoints = calculatePoints(teamBFixtures)
+  // Projected = manual base + predicted additional
+  const teamAProjectedTotal = resolveBasePoints(selectedTeamA?.name) + teamAPredictionPoints
+  const teamBProjectedTotal = resolveBasePoints(selectedTeamB?.name) + teamBPredictionPoints
   const hasPredictions = Object.keys(predictions).length > 0
 
   const generateShareImage = async () => {
@@ -162,8 +267,8 @@ export default function LivePredictionsPage() {
 
     // Background gradient matching app
     const gradient = ctx.createLinearGradient(0, 0, 0, 700)
-    gradient.addColorStop(0, '#f0fdf4')
-    gradient.addColorStop(1, '#ffffff')
+    gradient.addColorStop(0, '#EFF6FF') // blue-50
+    gradient.addColorStop(1, '#FFFFFF')
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, 1000, 700)
 
@@ -171,7 +276,7 @@ export default function LivePredictionsPage() {
     ctx.fillStyle = '#1f2937'
     ctx.font = 'bold 24px Arial'
     ctx.textAlign = 'center'
-    ctx.fillText('My Fixture Predictions', 500, 40)
+    ctx.fillText('Fixture Compare – Predictions', 500, 40)
 
     // Helper function to draw fixture card
     const drawFixtureCard = (fixture: any, teamName: string, isHome: boolean, cardX: number, cardY: number) => {
@@ -271,15 +376,44 @@ export default function LivePredictionsPage() {
       return cardY + cardHeight + 8
     }
 
+    // Helpers
+    const drawInitialCircle = (x: number, y: number, r: number, initial: string) => {
+      ctx.fillStyle = '#DBEAFE' // blue-100
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = '#1E40AF' // blue-800
+      ctx.font = `bold ${Math.floor(r)}px Arial`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(initial.toUpperCase(), x, y + 1)
+    }
+
+    const getInitial = (name: string) => (name?.trim()?.charAt(0) || 'U').toUpperCase()
+
     // Team A Section (Left Side)
     const leftX = 50
     let leftY = 80
-    
-    ctx.font = 'bold 18px Arial'
-    ctx.fillStyle = '#059669'
-    ctx.textAlign = 'center'
-    ctx.fillText(selectedTeamA.name, leftX + 190, leftY)
-    leftY += 30
+
+    // Header row: initial + name + subtitle, points metric on right
+    drawInitialCircle(leftX + 18, leftY, 14, getInitial(selectedTeamA.name))
+    ctx.fillStyle = '#111827' // gray-900
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'left'
+    ctx.fillText(selectedTeamA.name, leftX + 40, leftY + 4)
+    ctx.fillStyle = '#4B5563' // gray-600
+    ctx.font = '12px Arial'
+    ctx.fillText('Next 5 Fixtures', leftX + 40, leftY + 22)
+    // Right metric box
+    const teamAPoints = resolveBasePoints(selectedTeamA.name)
+    ctx.fillStyle = '#111827'
+    ctx.font = 'bold 24px Arial'
+    ctx.textAlign = 'right'
+    ctx.fillText(String(teamAPoints || '—'), leftX + 380, leftY + 6)
+    ctx.fillStyle = '#6B7280' // gray-500
+    ctx.font = '10px Arial'
+    ctx.fillText('Points', leftX + 380, leftY + 22)
+    leftY += 40
 
     // Team A fixtures
     const teamAWithPredictions = teamAFixtures.filter(f => predictions[f.id])
@@ -290,12 +424,26 @@ export default function LivePredictionsPage() {
     // Team B Section (Right Side)
     const rightX = 520
     let rightY = 80
-    
-    ctx.font = 'bold 18px Arial'
-    ctx.fillStyle = '#059669'
-    ctx.textAlign = 'center'
-    ctx.fillText(selectedTeamB.name, rightX + 190, rightY)
-    rightY += 30
+
+    // Header row: initial + name + subtitle, points metric on right
+    drawInitialCircle(rightX + 18, rightY, 14, getInitial(selectedTeamB.name))
+    ctx.fillStyle = '#111827' // gray-900
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'left'
+    ctx.fillText(selectedTeamB.name, rightX + 40, rightY + 4)
+    ctx.fillStyle = '#4B5563' // gray-600
+    ctx.font = '12px Arial'
+    ctx.fillText('Next 5 Fixtures', rightX + 40, rightY + 22)
+    // Right metric box
+    const teamBPoints = resolveBasePoints(selectedTeamB.name)
+    ctx.fillStyle = '#111827'
+    ctx.font = 'bold 24px Arial'
+    ctx.textAlign = 'right'
+    ctx.fillText(String(teamBPoints || '—'), rightX + 380, rightY + 6)
+    ctx.fillStyle = '#6B7280'
+    ctx.font = '10px Arial'
+    ctx.fillText('Points', rightX + 380, rightY + 22)
+    rightY += 40
 
     // Team B fixtures
     const teamBWithPredictions = teamBFixtures.filter(f => predictions[f.id])
@@ -306,20 +454,20 @@ export default function LivePredictionsPage() {
     // Points Section at Bottom
     const pointsY = Math.max(leftY, rightY) + 30
 
-    // Team A Points
+    // Team A Projected Points (manual base + predicted)
     ctx.font = 'bold 32px Arial'
     ctx.fillStyle = '#1f2937'
     ctx.textAlign = 'center'
-    ctx.fillText(teamAPredictionPoints.toString(), leftX + 190, pointsY)
+    ctx.fillText(teamAProjectedTotal.toString(), leftX + 190, pointsY)
     
     ctx.font = '14px Arial'
     ctx.fillStyle = '#6b7280'
     ctx.fillText('projected points', leftX + 190, pointsY + 25)
 
-    // Team B Points
+    // Team B Projected Points (manual base + predicted)
     ctx.font = 'bold 32px Arial'
     ctx.fillStyle = '#1f2937'
-    ctx.fillText(teamBPredictionPoints.toString(), rightX + 190, pointsY)
+    ctx.fillText(teamBProjectedTotal.toString(), rightX + 190, pointsY)
     
     ctx.font = '14px Arial'
     ctx.fillStyle = '#6b7280'
@@ -331,9 +479,9 @@ export default function LivePredictionsPage() {
     ctx.fillText('VS', 500, pointsY - 10)
 
     // Winner announcement
-    if (teamAPredictionPoints !== teamBPredictionPoints) {
-      const winner = teamAPredictionPoints > teamBPredictionPoints ? selectedTeamA.name : selectedTeamB.name
-      const pointDiff = Math.abs(teamAPredictionPoints - teamBPredictionPoints)
+    if (teamAProjectedTotal !== teamBProjectedTotal) {
+      const winner = teamAProjectedTotal > teamBProjectedTotal ? selectedTeamA.name : selectedTeamB.name
+      const pointDiff = Math.abs(teamAProjectedTotal - teamBProjectedTotal)
       
       ctx.font = 'bold 16px Arial'
       ctx.fillStyle = '#059669'
@@ -359,25 +507,31 @@ export default function LivePredictionsPage() {
   }
 
   const handleShareToSocial = async (platform: string) => {
+    // Generate the same image to keep UX consistent, even if we don't auto-attach it
     const imageData = await generateShareImage()
     if (!imageData) return
 
-    const text = `${selectedTeamA?.name} vs ${selectedTeamB?.name} - My fixture predictions: ${teamAPredictionPoints} vs ${teamBPredictionPoints} points!`
-    
+    const text = `${selectedTeamA?.name} vs ${selectedTeamB?.name} - My projected totals: ${teamAProjectedTotal} vs ${teamBProjectedTotal} points!`
+
     if (platform === 'twitter') {
-      // For Twitter, we'll open with text (image sharing requires more complex implementation)
       const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
       window.open(twitterUrl, '_blank')
-    } else if (platform === 'copy') {
-      // Copy text to clipboard
-      navigator.clipboard.writeText(text)
+      alert('Tweet text opened. To include the image, first use Download Image, then attach the saved PNG to your tweet.')
+      return
+    }
+
+    if (platform === 'copy') {
+      await navigator.clipboard.writeText(text)
       alert('Results copied to clipboard!')
     }
   }
 
 
   const getTeamBOptions = () => {
-    return availableTeams.filter(team => team.id !== selectedTeamA?.id)
+    return availableTeams
+      .filter(team => team.id !== selectedTeamA?.id)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const retryLoadTeams = () => {
@@ -503,7 +657,7 @@ export default function LivePredictionsPage() {
                         />
                       ) : null}
                       <div className={`w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-sm ${selectedTeamA.logo && selectedTeamA.logo.startsWith('http') ? 'hidden' : ''}`}>
-                        {selectedTeamA.name.charAt(0)}
+                        {(selectedTeamA.name?.trim()?.charAt(0) || 'U').toUpperCase()}
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">{selectedTeamA.name}</h3>
@@ -511,7 +665,7 @@ export default function LivePredictionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary-600">–</div>
+                      <div className="text-2xl font-bold text-primary-600">{resolveBasePoints(selectedTeamA.name) || '—'}</div>
                       <div className="text-xs text-gray-500">Points</div>
                     </div>
                   </div>
@@ -572,7 +726,7 @@ export default function LivePredictionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary-600">–</div>
+                      <div className="text-2xl font-bold text-primary-600">{resolveBasePoints(selectedTeamB.name) || '—'}</div>
                       <div className="text-xs text-gray-500">Points</div>
                     </div>
                   </div>
@@ -639,11 +793,11 @@ export default function LivePredictionsPage() {
                           />
                         ) : null}
                         <div className={`w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs ${selectedTeamA.logo && selectedTeamA.logo.startsWith('http') ? 'hidden' : ''}`}>
-                          {selectedTeamA.name.charAt(0)}
+                          {(selectedTeamA.name?.trim()?.charAt(0) || 'U').toUpperCase()}
                         </div>
                         <span className="font-semibold text-gray-900">{selectedTeamA.name}</span>
                       </div>
-                      <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamAPredictionPoints}</div>
+                      <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamAProjectedTotal}</div>
                       <div className="text-sm text-gray-500">projected points</div>
                     </div>
                     
@@ -661,21 +815,21 @@ export default function LivePredictionsPage() {
                           />
                         ) : null}
                         <div className={`w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs ${selectedTeamB.logo && selectedTeamB.logo.startsWith('http') ? 'hidden' : ''}`}>
-                          {selectedTeamB.name.charAt(0)}
+                          {(selectedTeamB.name?.trim()?.charAt(0) || 'U').toUpperCase()}
                         </div>
                         <span className="font-semibold text-gray-900">{selectedTeamB.name}</span>
                       </div>
-                      <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamBPredictionPoints}</div>
+                      <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamBProjectedTotal}</div>
                       <div className="text-sm text-gray-500">projected points</div>
                     </div>
                   </div>
 
-                  {teamAPredictionPoints !== teamBPredictionPoints && (
+                  {teamAProjectedTotal !== teamBProjectedTotal && (
                     <div className="mt-6 pt-4 border-t border-gray-200 text-center">
                       <p className="text-lg font-semibold text-gray-900 font-montserrat">
-                        {teamAPredictionPoints > teamBPredictionPoints ? selectedTeamA.name : selectedTeamB.name} 
+                        {teamAProjectedTotal > teamBProjectedTotal ? selectedTeamA.name : selectedTeamB.name} 
                         <span className="text-primary-600 ml-1">
-                          leads by {Math.abs(teamAPredictionPoints - teamBPredictionPoints)} point{Math.abs(teamAPredictionPoints - teamBPredictionPoints) !== 1 ? 's' : ''}
+                          leads by {Math.abs(teamAProjectedTotal - teamBProjectedTotal)} point{Math.abs(teamAProjectedTotal - teamBProjectedTotal) !== 1 ? 's' : ''}
                         </span>
                       </p>
                     </div>

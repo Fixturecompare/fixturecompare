@@ -1,0 +1,22 @@
+export const manualPoints: Record<string, number> = {
+  "Napoli": 15,
+  "Roma": 15,
+  "AC Milan": 13,
+  "Inter": 12,
+  "Juventus": 12,
+  "Atalanta": 10,
+  "Bologna": 10,
+  "Como": 9,
+  "Sassuolo": 9,
+  "Cremonese": 9,
+  "Cagliari": 8,
+  "Udinese": 8,
+  "Lazio": 7,
+  "Parma Calcio 1913": 5,
+  "Lecce": 5,
+  "Torino": 5,
+  "Fiorentina": 3,
+  "Verona": 3,
+  "Genoa": 2,
+  "Pisa": 2
+};

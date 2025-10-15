@@ -1,0 +1,22 @@
+export const manualPoints: Record<string, number> = {
+  "Real Madrid CF": 21,
+  "FC Barcelona": 19,
+  "Villarreal CF": 16,
+  "Real Betis Balompié": 15,
+  "Club Atlético de Madrid": 13,
+  "Sevilla FC": 13,
+  "Elche CF": 13,
+  "Athletic Club": 13,
+  "RCD Espanyol de Barcelona": 12,
+  "Deportivo Alavés": 11,
+  "Getafe CF": 11,
+  "CA Osasuna": 10,
+  "Levante UD": 8,
+  "Rayo Vallecano de Madrid": 8,
+  "Valencia CF": 8,
+  "RC Celta de Vigo": 6,
+  "Real Oviedo": 6,
+  "Girona FC": 6,
+  "Real Sociedad de Fútbol": 5,
+  "RCD Mallorca": 5
+};

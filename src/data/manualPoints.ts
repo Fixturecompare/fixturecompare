@@ -1,0 +1,22 @@
+export const manualPoints: Record<string, number> = {
+  "Arsenal": 16, "Arsenal FC": 16,
+  "Liverpool": 15, "Liverpool FC": 15,
+  "Tottenham": 14, "Tottenham Hotspur": 14, "Tottenham Hotspur FC": 14,
+  "Bournemouth": 14, "AFC Bournemouth": 14,
+  "Manchester City": 13, "Manchester City FC": 13,
+  "Crystal Palace": 12, "Crystal Palace FC": 12,
+  "Chelsea": 11, "Chelsea FC": 11,
+  "Everton": 11, "Everton FC": 11,
+  "Sunderland": 11, "Sunderland AFC": 11,
+  "Manchester United": 10, "Manchester Utd": 10, "Man United": 10, "Manchester United FC": 10,
+  "Newcastle United": 9, "Newcastle": 9, "Newcastle United FC": 9,
+  "Brighton": 9, "Brighton & Hove Albion": 9, "Brighton & Hove Albion FC": 9,
+  "Aston Villa": 9, "Aston Villa FC": 9,
+  "Fulham": 8, "Fulham FC": 8,
+  "Leeds": 8, "Leeds United": 8, "Leeds United FC": 8,
+  "Brentford": 7, "Brentford FC": 7,
+  "Nottingham Forest": 5, "Nottingham Forest FC": 5,
+  "Burnley": 4, "Burnley FC": 4,
+  "West Ham": 4, "West Ham United": 4, "West Ham United FC": 4,
+  "Wolverhampton Wanderers": 2, "Wolverhampton Wanderers FC": 2, "Wolves": 2
+};

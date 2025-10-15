@@ -1,0 +1,20 @@
+export const manualPoints: Record<string, number> = {
+  "Paris Saint Germain": 16,
+  "Marseille": 15,
+  "Strasbourg": 15,
+  "Lyon": 15,
+  "Monaco": 13,
+  "Lens": 13,
+  "Lille": 11,
+  "Paris FC": 10,
+  "Toulouse": 10,
+  "Rennes": 10,
+  "Brest": 8,
+  "Nice": 8,
+  "Lorient": 7,
+  "Le Havre": 6,
+  "Nantes": 6,
+  "Auxerre": 6,
+  "Angers": 5,
+  "Metz": 2
+};
