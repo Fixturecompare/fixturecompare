@@ -44,10 +44,10 @@ const config: Config = {
         skyBaseEnd: '#EAF3FF',
       },
       fontFamily: {
-        // Base font: Inter via next/font variable
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        // Utility: font-montserrat
-        montserrat: ['var(--font-montserrat)', 'system-ui', 'sans-serif'],
+        // Base font: Poppins first, then Inter fallback
+        sans: ['var(--font-poppins)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        // Map existing montserrat utility to Poppins to apply globally without changing markup
+        montserrat: ['var(--font-poppins)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

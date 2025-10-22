@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Header from '@/components/Header'
 import Dropdown from '@/components/Dropdown'
 import TeamFixtures from '@/components/TeamFixtures'
 import { leagues, getTeamsByLeague, getUpcomingFixturesForTeam } from '@/lib/data'
@@ -55,7 +54,6 @@ export default function PredictionsPage() {
 
   return (
     <main className="min-h-screen">
-      <Header />
       
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getManualPoints } from "@/utils/getManualPoints";
 const FD_API = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_TOKEN;
 
@@ -25,23 +26,62 @@ export async function GET(req: Request, { params }: { params: { leagueCode: stri
       id: row?.team?.id,
       teamName: row?.team?.name || "Unknown Team",
       shortName: row?.team?.shortName || row?.team?.name || "Unknown",
-      logo: row?.team?.crest || null,
+      crest: row?.team?.crest || null,
       position: row?.position ?? 0,
+      playedGames: row?.playedGames ?? 0,
+      won: row?.won ?? 0,
+      drawn: row?.draw ?? 0,
+      lost: row?.lost ?? 0,
+      goalDifference: (row?.goalsFor ?? 0) - (row?.goalsAgainst ?? 0),
       points: row?.points ?? 0,
-      form: row?.form || null,
-      stats: {
-        played: row?.playedGames ?? 0,
-        wins: row?.won ?? 0,
-        draws: row?.draw ?? 0,
-        losses: row?.lost ?? 0,
-        goalsFor: row?.goalsFor ?? 0,
-        goalsAgainst: row?.goalsAgainst ?? 0,
-      },
     }));
 
-    return NextResponse.json({ data: mapped, standings: [{ table: mapped }] }, { status: 200 });
+    if (mapped.length === 0) {
+      // Graceful fallback to manual points
+      const manual = getManualPoints(leagueCode);
+      const fallback = Object.entries(manual).map(([teamName, points]) => ({
+        id: undefined,
+        teamName,
+        shortName: teamName,
+        crest: null,
+        position: 0,
+        playedGames: 0,
+        won: 0,
+        drawn: 0,
+        lost: 0,
+        goalDifference: 0,
+        points,
+      }));
+      return NextResponse.json(
+        { data: fallback, standings: [{ table: fallback }] },
+        { status: 200, headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" } }
+      );
+    }
+
+    return NextResponse.json(
+      { data: mapped, standings: [{ table: mapped }] },
+      { status: 200, headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" } }
+    );
   } catch (err: any) {
     console.error("❌ Football-Data standings error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // Fallback to manual points on error
+    const manual = getManualPoints(leagueCode);
+    const fallback = Object.entries(manual).map(([teamName, points]) => ({
+      id: undefined,
+      teamName,
+      shortName: teamName,
+      crest: null,
+      position: 0,
+      playedGames: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      goalDifference: 0,
+      points,
+    }));
+    return NextResponse.json(
+      { data: fallback, standings: [{ table: fallback }], error: err.message },
+      { status: 200, headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" } }
+    );
   }
 }

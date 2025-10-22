@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import Header from '@/components/Header'
 import Dropdown from '@/components/Dropdown'
 import PredictiveFixtureCard, { PredictionType, FixtureData } from '@/components/PredictiveFixtureCard'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import ErrorMessage from '@/components/ErrorMessage'
 import { getTeams, getFixtures } from '@/lib/footballApi'
 import { getManualPoints } from '@/utils/getManualPoints'
+import { fetchPoints } from '@/utils/fetchPoints'
 
 interface Team {
   id: number
@@ -38,6 +38,10 @@ export default function LivePredictionsPage() {
   const [teamBFixtures, setTeamBFixtures] = useState<FixtureData[]>([])
   const [predictions, setPredictions] = useState<Predictions>({})
   const [availableTeams, setAvailableTeams] = useState<Team[]>([])
+  // Base points resolved from server endpoint (feature-flag drives live vs manual inside the API)
+  const [basePointsA, setBasePointsA] = useState<number | null>(null)
+  const [basePointsB, setBasePointsB] = useState<number | null>(null)
+  const [loadingBase, setLoadingBase] = useState({ A: false, B: false })
   const [totalPoints, setTotalPoints] = useState(0)
   const [loading, setLoading] = useState({
     teams: false,
@@ -53,7 +57,7 @@ export default function LivePredictionsPage() {
   // League-specific manual points map (PL, PD, SA, BL1, FL1)
   const leaguePointsMap = getManualPoints(selectedLeague)
 
-  // Build a normalized lookup map for robust matching
+  // Build a normalized lookup map for robust matching (kept for any auxiliary needs)
   const normalizeName = (s: string): string => {
     const lower = (s || '').toLowerCase()
     // remove diacritics
@@ -246,12 +250,42 @@ export default function LivePredictionsPage() {
     return resolveManualPoints(name)
   }
 
+  // Fetch base points for Team A via unified server endpoint
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedLeague || !selectedTeamA?.name) {
+        setBasePointsA(null)
+        return
+      }
+      setLoadingBase((s) => ({ ...s, A: true }))
+      const { points } = await fetchPoints(selectedLeague, selectedTeamA.name)
+      setBasePointsA(points)
+      setLoadingBase((s) => ({ ...s, A: false }))
+    }
+    run()
+  }, [selectedLeague, selectedTeamA?.name])
+
+  // Fetch base points for Team B via unified server endpoint
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedLeague || !selectedTeamB?.name) {
+        setBasePointsB(null)
+        return
+      }
+      setLoadingBase((s) => ({ ...s, B: true }))
+      const { points } = await fetchPoints(selectedLeague, selectedTeamB.name)
+      setBasePointsB(points)
+      setLoadingBase((s) => ({ ...s, B: false }))
+    }
+    run()
+  }, [selectedLeague, selectedTeamB?.name])
+
   // Predicted additional points from user selections
   const teamAPredictionPoints = calculatePoints(teamAFixtures)
   const teamBPredictionPoints = calculatePoints(teamBFixtures)
-  // Projected = manual base + predicted additional
-  const teamAProjectedTotal = resolveBasePoints(selectedTeamA?.name) + teamAPredictionPoints
-  const teamBProjectedTotal = resolveBasePoints(selectedTeamB?.name) + teamBPredictionPoints
+  // Projected = unified base (from /api/points) + predicted; if base not yet loaded, fallback to manual to avoid flicker
+  const teamAProjectedTotal = (basePointsA ?? resolveBasePoints(selectedTeamA?.name)) + teamAPredictionPoints
+  const teamBProjectedTotal = (basePointsB ?? resolveBasePoints(selectedTeamB?.name)) + teamBPredictionPoints
   const hasPredictions = Object.keys(predictions).length > 0
 
   const generateShareImage = async () => {
@@ -265,10 +299,12 @@ export default function LivePredictionsPage() {
     canvas.width = 1000
     canvas.height = 700
 
-    // Background gradient matching app
-    const gradient = ctx.createLinearGradient(0, 0, 0, 700)
-    gradient.addColorStop(0, '#EFF6FF') // blue-50
-    gradient.addColorStop(1, '#FFFFFF')
+    // Background gradient matching app (soft pastel purple with depth, diagonal)
+    // Use diagonal gradient top-left to bottom-right with an intermediate stop for depth
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
+    gradient.addColorStop(0, '#a78bfa')      // stronger dark purple
+    gradient.addColorStop(0.55, '#e9d5ff')   // mid lavender for depth
+    gradient.addColorStop(1, '#f3e8ff')      // light lavender
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, 1000, 700)
 
@@ -404,8 +440,8 @@ export default function LivePredictionsPage() {
     ctx.fillStyle = '#4B5563' // gray-600
     ctx.font = '12px Arial'
     ctx.fillText('Next 5 Fixtures', leftX + 40, leftY + 22)
-    // Right metric box
-    const teamAPoints = resolveBasePoints(selectedTeamA.name)
+    // Right metric box uses unified base points (fallback to manual only if not yet loaded)
+    const teamAPoints = (typeof basePointsA === 'number' ? basePointsA : resolveBasePoints(selectedTeamA.name))
     ctx.fillStyle = '#111827'
     ctx.font = 'bold 24px Arial'
     ctx.textAlign = 'right'
@@ -434,8 +470,8 @@ export default function LivePredictionsPage() {
     ctx.fillStyle = '#4B5563' // gray-600
     ctx.font = '12px Arial'
     ctx.fillText('Next 5 Fixtures', rightX + 40, rightY + 22)
-    // Right metric box
-    const teamBPoints = resolveBasePoints(selectedTeamB.name)
+    // Right metric box uses unified base points (fallback to manual only if not yet loaded)
+    const teamBPoints = (typeof basePointsB === 'number' ? basePointsB : resolveBasePoints(selectedTeamB.name))
     ctx.fillStyle = '#111827'
     ctx.font = 'bold 24px Arial'
     ctx.textAlign = 'right'
@@ -553,8 +589,7 @@ export default function LivePredictionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white">
-      <Header />
+    <div className="min-h-screen bg-gradient-to-br from-[#a78bfa] via-[#e9d5ff] to-[#f3e8ff]">
       
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
@@ -562,8 +597,8 @@ export default function LivePredictionsPage() {
           <h1 className="text-5xl font-bold text-gray-900 mb-4 font-montserrat">
             Fixture Compare
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Compare fixtures, forecast results, project points
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto font-montserrat uppercase italic">
+            Compare Fixtures - Forecast Results - Project Points
           </p>
         </div>
 
@@ -665,7 +700,7 @@ export default function LivePredictionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary-600">{resolveBasePoints(selectedTeamA.name) || '—'}</div>
+                      <div className="text-2xl font-bold text-primary-600">{basePointsA == null ? '—' : basePointsA}</div>
                       <div className="text-xs text-gray-500">Points</div>
                     </div>
                   </div>
@@ -726,7 +761,7 @@ export default function LivePredictionsPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary-600">{resolveBasePoints(selectedTeamB.name) || '—'}</div>
+                      <div className="text-2xl font-bold text-primary-600">{basePointsB == null ? '—' : basePointsB}</div>
                       <div className="text-xs text-gray-500">Points</div>
                     </div>
                   </div>
@@ -886,12 +921,8 @@ export default function LivePredictionsPage() {
         {/* Empty State */}
         {!selectedLeague && (
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">⚽</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Ready to Predict with Live Data?
-            </h3>
-            <p className="text-gray-600 max-w-md mx-auto">
-              Select a league above to start comparing live upcoming fixtures and making your predictions.
+            <p className="max-w-md mx-auto text-xl md:text-2xl font-semibold font-montserrat tracking-wide leading-relaxed text-black">
+              Select a league, choose two teams, and compare their next five fixtures to make your predictions
             </p>
           </div>
         )}
