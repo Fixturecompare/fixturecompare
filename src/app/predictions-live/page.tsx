@@ -921,7 +921,7 @@ export default function LivePredictionsPage() {
         {/* Empty State */}
         {!selectedLeague && (
           <div className="text-center py-16">
-            <p className="max-w-md mx-auto text-xl md:text-2xl font-semibold font-montserrat tracking-wide leading-relaxed text-black">
+            <p className="max-w-md mx-auto text-xl md:text-2xl font-semibold font-montserrat tracking-wide leading-relaxed text-gray-600">
               Select a league, choose two teams, and compare their next five fixtures to make your predictions
             </p>
           </div>
