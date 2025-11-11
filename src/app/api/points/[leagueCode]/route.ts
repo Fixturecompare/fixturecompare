@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { getStandings } from "@/lib/football";
 import { normalizeWithAliases } from "@/utils/resolveTeamName";

@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 const FD_API = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_TOKEN;
