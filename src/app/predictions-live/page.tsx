@@ -121,9 +121,17 @@ export default function LivePredictionsPage() {
     setErrors(prev => ({ ...prev, teams: '' }))
     
     try {
-      const teams = await getTeams(leagueCode)
-      const sorted = ([...(teams as Team[])]).sort((a, b) => a.name.localeCompare(b.name))
-      setAvailableTeams(sorted)
+      const result: any = await getTeams(leagueCode)
+      const teamsArr: Team[] = result && typeof result === 'object' && 'success' in result
+        ? (result.success ? (result.data?.teams || []) : [])
+        : (result as Team[])
+
+      if (Array.isArray(teamsArr) && teamsArr.length >= 0) {
+        const sorted = ([...teamsArr]).sort((a, b) => a.name.localeCompare(b.name))
+        setAvailableTeams(sorted)
+      } else {
+        throw new Error('Unexpected teams response shape')
+      }
     } catch (error) {
       setErrors(prev => ({ ...prev, teams: 'Failed to load teams. Please try again.' }))
       console.error('Error loading teams:', error)
@@ -141,8 +149,12 @@ export default function LivePredictionsPage() {
     setErrors(prev => ({ ...prev, [errorKey]: '' }))
     
     try {
-      const fixtures = await getFixtures(teamId, selectedLeague)
-      const transformedFixtures: FixtureData[] = (fixtures as any[]).map((fixture: any) => ({
+      const res: any = await getFixtures(teamId, selectedLeague)
+      const fixturesArr: any[] = res && typeof res === 'object' && 'success' in res
+        ? (res.success ? (res.data?.fixtures || []) : [])
+        : (res as any[])
+
+      const transformedFixtures: FixtureData[] = fixturesArr.map((fixture: any) => ({
         id: fixture.id + (team === 'B' ? 100000 : 0), // Offset Team B IDs
         opponent: fixture.opponent,
         opponentLogo: fixture.opponentLogo,

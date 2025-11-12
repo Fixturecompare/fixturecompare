@@ -45,17 +45,22 @@ const apiRequest = async (endpoint) => {
  */
 export const getTeams = async (leagueCode) => {
   try {
-    const response = await fetch(`/api/teams/${leagueCode}`);
-
+    const response = await fetch(`/api/teams/${leagueCode}`)
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text().catch(() => '')
+      console.error('[getTeams] HTTP', response.status, text)
+      return { success: false, data: { teams: [] }, error: `HTTP ${response.status}: ${text}` }
     }
-
-    const data = await response.json();
-    return data.teams;
+    const data = await response.json()
+    if (!data) {
+      console.error('[getTeams] Empty JSON body')
+      return { success: false, data: { teams: [] }, error: 'Empty response body' }
+    }
+    const teams = Array.isArray(data?.teams) ? data.teams : (Array.isArray(data?.data) ? data.data : [])
+    return { success: true, data: { teams }, error: null }
   } catch (error) {
-    console.error('Error fetching teams:', error);
-    throw error;
+    console.error('Error fetching teams:', error)
+    return { success: false, data: { teams: [] }, error: error?.message || String(error) }
   }
 };
 
@@ -69,18 +74,23 @@ export const getFixtures = async (teamId, leagueCode) => {
     const url = leagueCode 
       ? `/api/fixtures/${teamId}?leagueCode=${leagueCode}`
       : `/api/fixtures/${teamId}`;
-    
-    const response = await fetch(url);
 
+    const response = await fetch(url)
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text().catch(() => '')
+      console.error('[getFixtures] HTTP', response.status, text)
+      return { success: false, data: { fixtures: [] }, error: `HTTP ${response.status}: ${text}` }
     }
-
-    const data = await response.json();
-    return data.fixtures;
+    const data = await response.json()
+    if (!data) {
+      console.error('[getFixtures] Empty JSON body')
+      return { success: false, data: { fixtures: [] }, error: 'Empty response body' }
+    }
+    const fixtures = Array.isArray(data?.fixtures) ? data.fixtures : (Array.isArray(data?.data) ? data.data : [])
+    return { success: true, data: { fixtures }, error: null }
   } catch (error) {
-    console.error('Error fetching fixtures:', error);
-    throw error;
+    console.error('Error fetching fixtures:', error)
+    return { success: false, data: { fixtures: [] }, error: error?.message || String(error) }
   }
 };
 
