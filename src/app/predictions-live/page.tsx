@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Image from 'next/image'
 import Dropdown from '@/components/Dropdown'
 import PredictiveFixtureCard, { PredictionType, FixtureData } from '@/components/PredictiveFixtureCard'
 import LoadingSpinner from '@/components/LoadingSpinner'
@@ -53,6 +54,73 @@ export default function LivePredictionsPage() {
     teamAFixtures: '',
     teamBFixtures: ''
   })
+
+  // --- Mobile detection for summary-only abbreviation logic ---
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = typeof window !== 'undefined' ? window.matchMedia('(max-width: 640px)') : null
+    const update = () => setIsMobile(Boolean(mq?.matches))
+    update()
+    mq?.addEventListener('change', update)
+    return () => mq?.removeEventListener('change', update)
+  }, [])
+
+  // Helpers to abbreviate names when needed for symmetry on mobile
+  const deriveInitials = (name: string): string => {
+    const cleaned = (name || '')
+      .replace(/\b(football\s*club|fc|cf|sd|ac|as|rc|ud|de|club|futbol|calcio)\b/gi, ' ')
+      .replace(/[&.']/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const parts = cleaned.split(' ').filter(Boolean)
+    if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase()
+    // Prefer up to 3-4 initials
+    const initials = parts.map(p => p[0]!.toUpperCase()).join('')
+    return initials.slice(0, 4)
+  }
+
+  const getAbbr = (team: Team | null): string => {
+    if (!team) return ''
+    // Prefer provided shortName if it's meaningfully shorter; else derive initials
+    const short = (team.shortName || '').trim()
+    const hasShort = short && short.length <= 12
+    return hasShort ? short : deriveInitials(team.name || '')
+  }
+
+  const MAX_MOBILE_CHARS = 18
+  const computeDisplayNames = (a: Team | null, b: Team | null) => {
+    const aFull = a?.name || ''
+    const bFull = b?.name || ''
+    if (!isMobile) return { aName: aFull, bName: bFull, aTitle: undefined, bTitle: undefined }
+
+    const aLen = aFull.length
+    const bLen = bFull.length
+    const aTooLong = aLen > MAX_MOBILE_CHARS
+    const bTooLong = bLen > MAX_MOBILE_CHARS
+    const imbalanceA = aLen - bLen >= 5
+    const imbalanceB = bLen - aLen >= 5
+
+    let aUseAbbr = aTooLong || imbalanceA
+    let bUseAbbr = bTooLong || imbalanceB
+    // If both are long, abbreviate both for symmetry
+    if (aTooLong && bTooLong) {
+      aUseAbbr = true
+      bUseAbbr = true
+    }
+
+    const aAbbr = getAbbr(a)
+    const bAbbr = getAbbr(b)
+    const aName = aUseAbbr ? aAbbr : aFull
+    const bName = bUseAbbr ? bAbbr : bFull
+    const aTitle = aUseAbbr ? aFull : undefined
+    const bTitle = bUseAbbr ? bFull : undefined
+    return { aName, bName, aTitle, bTitle }
+  }
+
+  const { aName: summaryAName, bName: summaryBName, aTitle: summaryATitle, bTitle: summaryBTitle } = useMemo(
+    () => computeDisplayNames(selectedTeamA, selectedTeamB),
+    [selectedTeamA, selectedTeamB, isMobile]
+  )
 
   // League-specific manual points map (PL, PD, SA, BL1, FL1)
   const leaguePointsMap = getManualPoints(selectedLeague)
@@ -545,9 +613,29 @@ export default function LivePredictionsPage() {
   }
 
   const handleDownloadImage = async () => {
+    try {
+      if (selectedLeague && selectedTeamA?.id && selectedTeamB?.id) {
+        const base = window.location.origin
+        const apiUrl = `/api/export/predictions?league=${encodeURIComponent(selectedLeague)}&teamAId=${encodeURIComponent(String(selectedTeamA.id))}&teamBId=${encodeURIComponent(String(selectedTeamB.id))}&base=${encodeURIComponent(base)}`
+        const res = await fetch(apiUrl)
+        if (res.ok) {
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.download = `fixture-compare-${selectedTeamA.name}-vs-${selectedTeamB.name}-1200x630.png`
+          link.href = url
+          link.click()
+          URL.revokeObjectURL(url)
+          return
+        }
+      }
+    } catch (e) {
+      console.warn('API export failed, falling back to client canvas export', e)
+    }
+
+    // Fallback to canvas-based export
     const imageData = await generateShareImage()
     if (!imageData) return
-
     const link = document.createElement('a')
     link.download = `fixture-predictions-${selectedTeamA?.name}-vs-${selectedTeamB?.name}.png`
     link.href = imageData
@@ -606,9 +694,15 @@ export default function LivePredictionsPage() {
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4 font-montserrat">
-            Fixture Compare
-          </h1>
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/Asset%2010.png"
+              alt="Fixture Compare"
+              width={440}
+              height={120}
+              priority
+            />
+          </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto font-montserrat uppercase italic">
             Compare Fixtures - Forecast Results - Project Points
           </p>
@@ -697,6 +791,7 @@ export default function LivePredictionsPage() {
                           src={selectedTeamA.logo} 
                           alt={`${selectedTeamA.name} crest`}
                           className="w-8 h-8 object-contain"
+                          crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -758,6 +853,7 @@ export default function LivePredictionsPage() {
                           src={selectedTeamB.logo} 
                           alt={`${selectedTeamB.name} crest`}
                           className="w-8 h-8 object-contain"
+                          crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -810,17 +906,10 @@ export default function LivePredictionsPage() {
               </div>
             </div>
 
-            {/* Calculate Button & Results */}
+            {/* Results Summary */}
             {hasPredictions && (
               <div className="space-y-6">
-                <div className="text-center">
-                  <button className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg">
-                    Calculate Projected Points
-                  </button>
-                </div>
-
-                {/* Results Summary */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 max-w-2xl mx-auto">
+                <div className="bg-white rounded-lg border border-gray-400 shadow p-6 max-w-2xl mx-auto">
                   <h3 className="text-xl font-bold text-gray-900 text-center mb-6 font-montserrat">
                     Projected Points Summary
                   </h3>
@@ -833,6 +922,7 @@ export default function LivePredictionsPage() {
                             src={selectedTeamA.logo} 
                             alt={`${selectedTeamA.name} crest`}
                             className="w-6 h-6 object-contain"
+                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -842,7 +932,12 @@ export default function LivePredictionsPage() {
                         <div className={`w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs ${selectedTeamA.logo && selectedTeamA.logo.startsWith('http') ? 'hidden' : ''}`}>
                           {(selectedTeamA.name?.trim()?.charAt(0) || 'U').toUpperCase()}
                         </div>
-                        <span className="font-semibold text-gray-900">{selectedTeamA.name}</span>
+                        <span
+                          className="font-semibold text-gray-900 whitespace-nowrap sm:whitespace-normal max-w-[140px] sm:max-w-none truncate"
+                          title={summaryATitle}
+                        >
+                          {summaryAName}
+                        </span>
                       </div>
                       <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamAProjectedTotal}</div>
                       <div className="text-sm text-gray-500">projected points</div>
@@ -855,6 +950,7 @@ export default function LivePredictionsPage() {
                             src={selectedTeamB.logo} 
                             alt={`${selectedTeamB.name} crest`}
                             className="w-6 h-6 object-contain"
+                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -864,7 +960,12 @@ export default function LivePredictionsPage() {
                         <div className={`w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs ${selectedTeamB.logo && selectedTeamB.logo.startsWith('http') ? 'hidden' : ''}`}>
                           {(selectedTeamB.name?.trim()?.charAt(0) || 'U').toUpperCase()}
                         </div>
-                        <span className="font-semibold text-gray-900">{selectedTeamB.name}</span>
+                        <span
+                          className="font-semibold text-gray-900 whitespace-nowrap sm:whitespace-normal max-w-[140px] sm:max-w-none truncate"
+                          title={summaryBTitle}
+                        >
+                          {summaryBName}
+                        </span>
                       </div>
                       <div className="text-3xl font-bold text-primary-600 font-montserrat">{teamBProjectedTotal}</div>
                       <div className="text-sm text-gray-500">projected points</div>
@@ -887,43 +988,17 @@ export default function LivePredictionsPage() {
 
             {/* Share Results Section */}
             {selectedTeamA && selectedTeamB && hasPredictions && (
-              <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center font-montserrat">
-                  Share Your Predictions
-                </h3>
-                <div className="flex flex-wrap justify-center gap-3">
+              <div className="mt-8 bg-white rounded-lg border border-gray-400 shadow p-6">
+                <div className="flex justify-center">
                   <button
                     onClick={handleDownloadImage}
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span>Download Image</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleShareToSocial('twitter')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                    </svg>
-                    <span>Share to Twitter</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleShareToSocial('copy')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span>Copy Results</span>
+                    Share Your Predictions
                   </button>
                 </div>
                 <p className="text-sm text-gray-500 text-center mt-3">
-                  Generate a shareable image with your prediction results and points totals
+                  Generate a shareable image with your predicted results and points totals
                 </p>
               </div>
             )}
