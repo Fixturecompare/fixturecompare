@@ -87,9 +87,9 @@ const ExportPredictionsPage: React.FC = () => {
 
   // Watermark
   const Watermark = () => (
-    <div className="absolute bottom-6 right-6 flex items-center space-x-2 opacity-90">
+    <div className="pointer-events-none select-none absolute bottom-6 right-6 flex items-center space-x-2 opacity-90">
       <img
-        src="/logo/fixture-compare-logo.png"
+        src="/fixture-compare-logo.png"
         alt="Fixture Compare logo"
         title="Fixture Compare"
         width={160}

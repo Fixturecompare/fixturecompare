@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "checkpoint": "node scripts/checkpoint.js",
-    "export:predictions": "node scripts/export-predictions.js --league=PL --teamAId=57 --teamBId=64 --out=public/exports/fixture-compare-arsenal-vs-liverpool-1200x630.png --base=http://localhost:3000"
+    "checkpoint": "node scripts/checkpoint.js"
   },
   "dependencies": {
     "react": "^18",

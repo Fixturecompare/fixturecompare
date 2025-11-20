@@ -613,27 +613,6 @@ export default function LivePredictionsPage() {
   }
 
   const handleDownloadImage = async () => {
-    try {
-      if (selectedLeague && selectedTeamA?.id && selectedTeamB?.id) {
-        const base = window.location.origin
-        const apiUrl = `/api/export/predictions?league=${encodeURIComponent(selectedLeague)}&teamAId=${encodeURIComponent(String(selectedTeamA.id))}&teamBId=${encodeURIComponent(String(selectedTeamB.id))}&base=${encodeURIComponent(base)}`
-        const res = await fetch(apiUrl)
-        if (res.ok) {
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.download = `fixture-compare-${selectedTeamA.name}-vs-${selectedTeamB.name}-1200x630.png`
-          link.href = url
-          link.click()
-          URL.revokeObjectURL(url)
-          return
-        }
-      }
-    } catch (e) {
-      console.warn('API export failed, falling back to client canvas export', e)
-    }
-
-    // Fallback to canvas-based export
     const imageData = await generateShareImage()
     if (!imageData) return
     const link = document.createElement('a')
@@ -791,7 +770,6 @@ export default function LivePredictionsPage() {
                           src={selectedTeamA.logo} 
                           alt={`${selectedTeamA.name} crest`}
                           className="w-8 h-8 object-contain"
-                          crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -853,7 +831,6 @@ export default function LivePredictionsPage() {
                           src={selectedTeamB.logo} 
                           alt={`${selectedTeamB.name} crest`}
                           className="w-8 h-8 object-contain"
-                          crossOrigin="anonymous"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -922,7 +899,6 @@ export default function LivePredictionsPage() {
                             src={selectedTeamA.logo} 
                             alt={`${selectedTeamA.name} crest`}
                             className="w-6 h-6 object-contain"
-                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
@@ -950,7 +926,6 @@ export default function LivePredictionsPage() {
                             src={selectedTeamB.logo} 
                             alt={`${selectedTeamB.name} crest`}
                             className="w-6 h-6 object-contain"
-                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');

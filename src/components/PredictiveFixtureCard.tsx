@@ -103,7 +103,6 @@ export default function PredictiveFixtureCard({
         src={src} 
         alt={`${teamName} crest`} 
         className="w-6 h-6 object-contain"
-        crossOrigin="anonymous"
         onError={() => setError(true)}
       />
     )
