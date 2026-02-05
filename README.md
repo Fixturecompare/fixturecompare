@@ -70,3 +70,5 @@ The app uses a custom Tailwind configuration with:
 - Custom animations (fade-in, slide-up, scale-in)
 - Inter font family
 - Responsive breakpoints
+
+ 

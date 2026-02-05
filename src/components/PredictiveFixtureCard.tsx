@@ -60,26 +60,26 @@ export default function PredictiveFixtureCard({
 
   const getButtonStyles = (buttonType: PredictionType) => {
     const isSelected = prediction === buttonType
-    const baseStyles = "h-9 rounded-md font-semibold text-xs transition-all duration-200 transform active:scale-95 flex items-center justify-center"
+    const baseStyles = "h-8 rounded-md font-semibold text-[11px] transition-all duration-200 flex items-center justify-center"
     
     switch (buttonType) {
       case 'win':
         return `${baseStyles} ${
           isSelected 
-            ? 'bg-green-600 text-white shadow-md scale-105' 
-            : 'border-2 border-green-600 text-green-600 hover:bg-green-50 hover:scale-105'
+            ? 'bg-green-600 text-white shadow' 
+            : 'border border-green-600 text-green-600 hover:bg-green-50'
         }`
       case 'draw':
         return `${baseStyles} ${
           isSelected 
-            ? 'bg-amber-500 text-white shadow-md scale-105' 
-            : 'border-2 border-amber-500 text-amber-600 hover:bg-amber-50 hover:scale-105'
+            ? 'bg-amber-500 text-white shadow' 
+            : 'border border-amber-500 text-amber-600 hover:bg-amber-50'
         }`
       case 'lose':
         return `${baseStyles} ${
           isSelected 
-            ? 'bg-red-600 text-white shadow-md scale-105' 
-            : 'border-2 border-red-600 text-red-600 hover:bg-red-50 hover:scale-105'
+            ? 'bg-red-600 text-white shadow' 
+            : 'border border-red-600 text-red-600 hover:bg-red-50'
         }`
       default:
         return baseStyles
@@ -92,7 +92,7 @@ export default function PredictiveFixtureCard({
     
     if (!src || hasError) {
       return (
-        <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-600">
+        <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-gray-600">
           {getTeamInitial(teamName)}
         </div>
       )
@@ -102,44 +102,44 @@ export default function PredictiveFixtureCard({
       <img 
         src={src} 
         alt={`${teamName} crest`} 
-        className="w-6 h-6 object-contain"
+        className="w-5 h-5 object-contain"
         onError={() => setError(true)}
       />
     )
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[#A9D0FF] p-1.5 transition-all duration-300 shadow-lg hover:shadow-xl hover:border-accentBlue animate-slide-up-slow">
+    <div className="bg-white rounded-lg border border-[#A9D0FF] p-1 transition-all duration-300 shadow-md">
       {/* Header Row */}
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center space-x-1 text-xs text-gray-500">
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center space-x-1 text-[11px] text-gray-500">
+          <svg className="w-[10px] h-[10px]" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
           </svg>
           <span>{formatDate(fixture.date)}</span>
         </div>
         <div className="flex items-center space-x-2">
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
             fixture.home 
               ? 'bg-green-100 text-green-800' 
               : 'bg-blue-100 text-blue-800'
           }`}>
             {fixture.home ? 'HOME' : 'AWAY'}
           </span>
-          <span className="text-xs text-gray-500 font-medium">
+          <span className="text-[11px] text-gray-500 font-medium">
             GW{fixture.gameweek || Math.floor(Math.random() * 38) + 1}
           </span>
         </div>
       </div>
 
       {/* Team Display Row */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1.5">
         {fixture.home ? (
           // Home game: Selected team on left, opponent on right
           <>
             <div className="flex flex-col items-center space-y-0.5 flex-1">
               <TeamCrest src={teamLogo} teamName={teamName || 'Team'} />
-              <span className="text-xs font-bold text-gray-900 text-center">
+              <span className="text-[11px] font-bold text-gray-900 text-center leading-tight">
                 {truncateTeamName(teamName || 'Team')}
               </span>
             </div>
@@ -150,7 +150,7 @@ export default function PredictiveFixtureCard({
             
             <div className="flex flex-col items-center space-y-0.5 flex-1">
               <TeamCrest src={fixture.opponentLogo} teamName={fixture.opponent} isOpponent />
-              <span className="text-xs font-bold text-gray-900 text-center">
+              <span className="text-[11px] font-bold text-gray-900 text-center leading-tight">
                 {truncateTeamName(fixture.opponent)}
               </span>
             </div>
@@ -160,7 +160,7 @@ export default function PredictiveFixtureCard({
           <>
             <div className="flex flex-col items-center space-y-0.5 flex-1">
               <TeamCrest src={fixture.opponentLogo} teamName={fixture.opponent} isOpponent />
-              <span className="text-xs font-bold text-gray-900 text-center">
+              <span className="text-[11px] font-bold text-gray-900 text-center leading-tight">
                 {truncateTeamName(fixture.opponent)}
               </span>
             </div>
@@ -171,7 +171,7 @@ export default function PredictiveFixtureCard({
             
             <div className="flex flex-col items-center space-y-0.5 flex-1">
               <TeamCrest src={teamLogo} teamName={teamName || 'Team'} />
-              <span className="text-xs font-bold text-gray-900 text-center">
+              <span className="text-[11px] font-bold text-gray-900 text-center leading-tight">
                 {truncateTeamName(teamName || 'Team')}
               </span>
             </div>
@@ -189,7 +189,7 @@ export default function PredictiveFixtureCard({
         >
           <div className="flex flex-col items-center">
             <span>W</span>
-            <span className="text-xs opacity-75">3</span>
+            <span className="text-[11px] opacity-75">3</span>
           </div>
         </button>
         <button
@@ -200,7 +200,7 @@ export default function PredictiveFixtureCard({
         >
           <div className="flex flex-col items-center">
             <span>D</span>
-            <span className="text-xs opacity-75">1</span>
+            <span className="text-[11px] opacity-75">1</span>
           </div>
         </button>
         <button
@@ -211,7 +211,7 @@ export default function PredictiveFixtureCard({
         >
           <div className="flex flex-col items-center">
             <span>L</span>
-            <span className="text-xs opacity-75">0</span>
+            <span className="text-[11px] opacity-75">0</span>
           </div>
         </button>
       </div>

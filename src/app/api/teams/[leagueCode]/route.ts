@@ -9,12 +9,25 @@ export async function GET(req: Request, { params }: { params: { leagueCode: stri
   try {
     // Use standings endpoint to derive teams, which is generally less restricted
     const url = `${FD_API}/competitions/${leagueCode}/standings`;
-    const res = await fetch(url, {
-      headers: {
-        "X-Auth-Token": String(FD_TOKEN || ""),
-        Accept: "application/json",
-      },
-    });
+    // Timeout-protected fetch (5s)
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 5000);
+
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: {
+          "X-Auth-Token": String(FD_TOKEN || ""),
+          Accept: "application/json",
+        },
+        signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(`Football-Data standings error: ${data?.message || res.statusText}`);
 
@@ -33,7 +46,7 @@ export async function GET(req: Request, { params }: { params: { leagueCode: stri
 
     // Deduplicate by id just in case
     const seen = new Set<number>();
-    const unique = mapped.filter((t) => {
+    const unique = mapped.filter((t: any) => {
       if (!t?.id || seen.has(t.id)) return false;
       seen.add(t.id);
       return true;
@@ -44,8 +57,16 @@ export async function GET(req: Request, { params }: { params: { leagueCode: stri
       { status: 200, headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" } }
     );
   } catch (err: any) {
-    console.error("❌ Football-Data teams error:", err);
-    // Graceful empty list to keep UI functional even if FD is restricted
-    return NextResponse.json({ data: [], teams: [], error: err.message }, { status: 200 });
+    // If the AbortController fired, treat as timeout and log once
+    if (err?.name === "AbortError" || /aborted/i.test(String(err?.message))) {
+      console.warn('[teams] Football-Data timeout', params?.leagueCode);
+    } else if (typeof err?.message === 'string' && err.message.toLowerCase().includes('timeout')) {
+      console.warn('[teams] Football-Data timeout', params?.leagueCode);
+    } else if (typeof err?.message === 'string' && err.message) {
+      // Keep error visibility minimal but consistent
+      console.error("❌ Football-Data teams error:", err.message);
+    }
+    // Always resolve promptly with a stable shape to avoid UI hangs
+    return NextResponse.json({ data: [], teams: [], error: 'timeout' }, { status: 200 });
   }
 }
