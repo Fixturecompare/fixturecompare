@@ -367,279 +367,58 @@ export default function LivePredictionsPage() {
   const teamAProjectedTotal = (basePointsA ?? resolveBasePoints(selectedTeamA?.name)) + teamAPredictionPoints
   const teamBProjectedTotal = (basePointsB ?? resolveBasePoints(selectedTeamB?.name)) + teamBPredictionPoints
   const hasPredictions = Object.keys(predictions).length > 0
-
-  const generateShareImage = async () => {
-    if (!selectedTeamA || !selectedTeamB || !hasPredictions) return
-
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Set canvas size for side-by-side desktop format
-    canvas.width = 1000
-    canvas.height = 700
-
-    // Background gradient matching app (soft pastel purple with depth, diagonal)
-    // Use diagonal gradient top-left to bottom-right with an intermediate stop for depth
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
-    gradient.addColorStop(0, '#a78bfa')      // stronger dark purple
-    gradient.addColorStop(0.55, '#e9d5ff')   // mid lavender for depth
-    gradient.addColorStop(1, '#f3e8ff')      // light lavender
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, 1000, 700)
-
-    // Title
-    ctx.fillStyle = '#1f2937'
-    ctx.font = 'bold 24px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('Fixture Compare – Predictions', 500, 40)
-
-    // Helper function to draw fixture card
-    const drawFixtureCard = (fixture: any, teamName: string, isHome: boolean, cardX: number, cardY: number) => {
-      const prediction = predictions[fixture.id]
-      if (!prediction) return cardY
-
-      const cardWidth = 380
-      const cardHeight = 70
-      
-      // Card background (white rounded rectangle)
-      ctx.fillStyle = '#ffffff'
-      ctx.strokeStyle = '#e5e7eb'
-      ctx.lineWidth = 1
-      
-      // Rounded rectangle
-      ctx.beginPath()
-      ctx.roundRect(cardX, cardY, cardWidth, cardHeight, 8)
-      ctx.fill()
-      ctx.stroke()
-
-      // Date and gameweek
-      ctx.font = '10px Arial'
-      ctx.fillStyle = '#6b7280'
-      ctx.textAlign = 'left'
-      const date = new Date(fixture.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      ctx.fillText(date, cardX + 10, cardY + 15)
-      
-      ctx.textAlign = 'right'
-      ctx.fillText(`GW${fixture.gameweek || Math.floor(Math.random() * 38) + 1}`, cardX + cardWidth - 10, cardY + 15)
-
-      // Home/Away badge
-      const badgeText = isHome ? 'HOME' : 'AWAY'
-      const badgeColor = isHome ? '#dcfce7' : '#dbeafe'
-      const badgeTextColor = isHome ? '#166534' : '#1e40af'
-      
-      ctx.fillStyle = badgeColor
-      ctx.fillRect(cardX + cardWidth - 60, cardY + 20, 45, 16)
-      ctx.font = 'bold 8px Arial'
-      ctx.fillStyle = badgeTextColor
-      ctx.textAlign = 'center'
-      ctx.fillText(badgeText, cardX + cardWidth - 37.5, cardY + 30)
-
-      // Team vs Opponent
-      ctx.font = 'bold 12px Arial'
-      ctx.fillStyle = '#1f2937'
-      ctx.textAlign = 'center'
-      
-      const matchText = isHome ? `${teamName} vs ${fixture.opponent}` : `${fixture.opponent} vs ${teamName}`
-      ctx.fillText(matchText, cardX + cardWidth/2, cardY + 40)
-
-      // Prediction buttons
-      const buttonWidth = 45
-      const buttonHeight = 18
-      const buttonY = cardY + 48
-      const buttonSpacing = 55
-      const startX = cardX + cardWidth/2 - (buttonSpacing * 1.5) + (buttonWidth / 2)
-
-      // Win button
-      const winSelected = prediction === 'win'
-      ctx.fillStyle = winSelected ? '#059669' : '#ffffff'
-      ctx.strokeStyle = '#059669'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.roundRect(startX, buttonY, buttonWidth, buttonHeight, 4)
-      ctx.fill()
-      ctx.stroke()
-      
-      ctx.font = 'bold 9px Arial'
-      ctx.fillStyle = winSelected ? '#ffffff' : '#059669'
-      ctx.textAlign = 'center'
-      ctx.fillText('W', startX + buttonWidth/2, buttonY + 12)
-
-      // Draw button
-      const drawSelected = prediction === 'draw'
-      ctx.fillStyle = drawSelected ? '#d97706' : '#ffffff'
-      ctx.strokeStyle = '#d97706'
-      ctx.beginPath()
-      ctx.roundRect(startX + buttonSpacing, buttonY, buttonWidth, buttonHeight, 4)
-      ctx.fill()
-      ctx.stroke()
-      
-      ctx.fillStyle = drawSelected ? '#ffffff' : '#d97706'
-      ctx.fillText('D', startX + buttonSpacing + buttonWidth/2, buttonY + 12)
-
-      // Lose button
-      const loseSelected = prediction === 'lose'
-      ctx.fillStyle = loseSelected ? '#dc2626' : '#ffffff'
-      ctx.strokeStyle = '#dc2626'
-      ctx.beginPath()
-      ctx.roundRect(startX + buttonSpacing * 2, buttonY, buttonWidth, buttonHeight, 4)
-      ctx.fill()
-      ctx.stroke()
-      
-      ctx.fillStyle = loseSelected ? '#ffffff' : '#dc2626'
-      ctx.fillText('L', startX + buttonSpacing * 2 + buttonWidth/2, buttonY + 12)
-
-      return cardY + cardHeight + 8
+  const handleShareDownload = () => {
+    if (!selectedLeague || !selectedTeamA || !selectedTeamB) return
+    // Build a full export payload so /export/predictions can render synchronously as well
+    const baseA = (basePointsA ?? resolveBasePoints(selectedTeamA?.name)) || 0
+    const baseB = (basePointsB ?? resolveBasePoints(selectedTeamB?.name)) || 0
+    const addA = calculatePoints(teamAFixtures)
+    const addB = calculatePoints(teamBFixtures)
+    const fullPayload = {
+      v: 3,
+      league: selectedLeague,
+      teamA: { id: selectedTeamA.id, name: selectedTeamA.name, shortName: selectedTeamA.shortName, logo: selectedTeamA.logo },
+      teamB: { id: selectedTeamB.id, name: selectedTeamB.name, shortName: selectedTeamB.shortName, logo: selectedTeamB.logo },
+      fixturesA: teamAFixtures.slice(0, 5).map(f => ({
+        id: Number(f.id),
+        opponent: f.opponent,
+        opponentLogo: f.opponentLogo,
+        home: !!f.home,
+        date: f.date,
+        time: f.time,
+        league: f.league,
+        status: f.status,
+        gameweek: f.gameweek,
+      })),
+      fixturesB: teamBFixtures.slice(0, 5).map(f => ({
+        id: Number(f.id), // already offset by +100000 in client loader
+        opponent: f.opponent,
+        opponentLogo: f.opponentLogo,
+        home: !!f.home,
+        date: f.date,
+        time: f.time,
+        league: f.league,
+        status: f.status,
+        gameweek: f.gameweek,
+      })),
+      predictions,
+      baseTotals: { A: baseA, B: baseB },
+      totals: { A: baseA + addA, B: baseB + addB },
     }
-
-    // Helpers
-    const drawInitialCircle = (x: number, y: number, r: number, initial: string) => {
-      ctx.fillStyle = '#DBEAFE' // blue-100
-      ctx.beginPath()
-      ctx.arc(x, y, r, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.fillStyle = '#1E40AF' // blue-800
-      ctx.font = `bold ${Math.floor(r)}px Arial`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(initial.toUpperCase(), x, y + 1)
-    }
-
-    const getInitial = (name: string) => (name?.trim()?.charAt(0) || 'U').toUpperCase()
-
-    // Team A Section (Left Side)
-    const leftX = 50
-    let leftY = 80
-
-    // Header row: initial + name + subtitle, points metric on right
-    drawInitialCircle(leftX + 18, leftY, 14, getInitial(selectedTeamA.name))
-    ctx.fillStyle = '#111827' // gray-900
-    ctx.font = 'bold 16px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText(selectedTeamA.name, leftX + 40, leftY + 4)
-    ctx.fillStyle = '#4B5563' // gray-600
-    ctx.font = '12px Arial'
-    ctx.fillText('Next 5 Fixtures', leftX + 40, leftY + 22)
-    // Right metric box uses unified base points (fallback to manual only if not yet loaded)
-    const teamAPoints = (typeof basePointsA === 'number' ? basePointsA : resolveBasePoints(selectedTeamA.name))
-    ctx.fillStyle = '#111827'
-    ctx.font = 'bold 24px Arial'
-    ctx.textAlign = 'right'
-    ctx.fillText(String(teamAPoints || '—'), leftX + 380, leftY + 6)
-    ctx.fillStyle = '#6B7280' // gray-500
-    ctx.font = '10px Arial'
-    ctx.fillText('Points', leftX + 380, leftY + 22)
-    leftY += 40
-
-    // Team A fixtures
-    const teamAWithPredictions = teamAFixtures.filter(f => predictions[f.id])
-    teamAWithPredictions.slice(0, 6).forEach(fixture => {
-      leftY = drawFixtureCard(fixture, selectedTeamA.name, fixture.home, leftX, leftY)
+    const json = JSON.stringify(fullPayload)
+    const b64 = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(json))) : ''
+    const params = new URLSearchParams({
+      league: selectedLeague,
+      teamAId: String(selectedTeamA.id),
+      teamBId: String(selectedTeamB.id),
+      data: b64,
     })
-
-    // Team B Section (Right Side)
-    const rightX = 520
-    let rightY = 80
-
-    // Header row: initial + name + subtitle, points metric on right
-    drawInitialCircle(rightX + 18, rightY, 14, getInitial(selectedTeamB.name))
-    ctx.fillStyle = '#111827' // gray-900
-    ctx.font = 'bold 16px Arial'
-    ctx.textAlign = 'left'
-    ctx.fillText(selectedTeamB.name, rightX + 40, rightY + 4)
-    ctx.fillStyle = '#4B5563' // gray-600
-    ctx.font = '12px Arial'
-    ctx.fillText('Next 5 Fixtures', rightX + 40, rightY + 22)
-    // Right metric box uses unified base points (fallback to manual only if not yet loaded)
-    const teamBPoints = (typeof basePointsB === 'number' ? basePointsB : resolveBasePoints(selectedTeamB.name))
-    ctx.fillStyle = '#111827'
-    ctx.font = 'bold 24px Arial'
-    ctx.textAlign = 'right'
-    ctx.fillText(String(teamBPoints || '—'), rightX + 380, rightY + 6)
-    ctx.fillStyle = '#6B7280'
-    ctx.font = '10px Arial'
-    ctx.fillText('Points', rightX + 380, rightY + 22)
-    rightY += 40
-
-    // Team B fixtures
-    const teamBWithPredictions = teamBFixtures.filter(f => predictions[f.id])
-    teamBWithPredictions.slice(0, 6).forEach(fixture => {
-      rightY = drawFixtureCard(fixture, selectedTeamB.name, fixture.home, rightX, rightY)
-    })
-
-    // Points Section at Bottom
-    const pointsY = Math.max(leftY, rightY) + 30
-
-    // Team A Projected Points (manual base + predicted)
-    ctx.font = 'bold 32px Arial'
-    ctx.fillStyle = '#1f2937'
-    ctx.textAlign = 'center'
-    ctx.fillText(teamAProjectedTotal.toString(), leftX + 190, pointsY)
-    
-    ctx.font = '14px Arial'
-    ctx.fillStyle = '#6b7280'
-    ctx.fillText('projected points', leftX + 190, pointsY + 25)
-
-    // Team B Projected Points (manual base + predicted)
-    ctx.font = 'bold 32px Arial'
-    ctx.fillStyle = '#1f2937'
-    ctx.fillText(teamBProjectedTotal.toString(), rightX + 190, pointsY)
-    
-    ctx.font = '14px Arial'
-    ctx.fillStyle = '#6b7280'
-    ctx.fillText('projected points', rightX + 190, pointsY + 25)
-
-    // VS in center
-    ctx.font = 'bold 20px Arial'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText('VS', 500, pointsY - 10)
-
-    // Winner announcement
-    if (teamAProjectedTotal !== teamBProjectedTotal) {
-      const winner = teamAProjectedTotal > teamBProjectedTotal ? selectedTeamA.name : selectedTeamB.name
-      const pointDiff = Math.abs(teamAProjectedTotal - teamBProjectedTotal)
-      
-      ctx.font = 'bold 16px Arial'
-      ctx.fillStyle = '#059669'
-      ctx.fillText(`${winner} leads by ${pointDiff} point${pointDiff !== 1 ? 's' : ''}`, 500, pointsY + 60)
-    }
-
-    // Footer
-    ctx.font = '12px Arial'
-    ctx.fillStyle = '#6b7280'
-    ctx.fillText('Generated by Fixture Compare', 500, pointsY + 90)
-
-    return canvas.toDataURL('image/png')
+    // Primary: generate and download via API (server will ignore extra fields and rebuild a fresh payload for consistency)
+    window.location.href = `/api/share-image?${params.toString()}`
+    // Tip: you can also preview directly by opening `/export/predictions?data=${b64}` in a new tab.
   }
 
-  const handleDownloadImage = async () => {
-    const imageData = await generateShareImage()
-    if (!imageData) return
-    const link = document.createElement('a')
-    link.download = `fixture-predictions-${selectedTeamA?.name}-vs-${selectedTeamB?.name}.png`
-    link.href = imageData
-    link.click()
-  }
-
-  const handleShareToSocial = async (platform: string) => {
-    // Generate the same image to keep UX consistent, even if we don't auto-attach it
-    const imageData = await generateShareImage()
-    if (!imageData) return
-
-    const text = `${selectedTeamA?.name} vs ${selectedTeamB?.name} - My projected totals: ${teamAProjectedTotal} vs ${teamBProjectedTotal} points!`
-
-    if (platform === 'twitter') {
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
-      window.open(twitterUrl, '_blank')
-      alert('Tweet text opened. To include the image, first use Download Image, then attach the saved PNG to your tweet.')
-      return
-    }
-
-    if (platform === 'copy') {
-      await navigator.clipboard.writeText(text)
-      alert('Results copied to clipboard!')
-    }
-  }
+  
 
 
   const getTeamBOptions = () => {
@@ -675,16 +454,13 @@ export default function LivePredictionsPage() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Image
-              src="/Asset%2010.png"
+              src="/fixturecompare-logo.png"
               alt="Fixture Compare"
-              width={440}
-              height={120}
+              width={552}
+              height={151}
               priority
             />
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto font-montserrat uppercase italic">
-            Compare Fixtures - Forecast Results - Project Points
-          </p>
         </div>
 
         {/* League Selection */}
@@ -966,7 +742,7 @@ export default function LivePredictionsPage() {
               <div className="mt-8 bg-white rounded-lg border border-gray-400 shadow p-6">
                 <div className="flex justify-center">
                   <button
-                    onClick={handleDownloadImage}
+                    onClick={handleShareDownload}
                     className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold"
                   >
                     Share Your Predictions
@@ -983,7 +759,10 @@ export default function LivePredictionsPage() {
         {/* Empty State */}
         {!selectedLeague && (
           <div className="text-center py-16">
-            <p className="max-w-md mx-auto text-xl md:text-2xl font-semibold font-montserrat tracking-wide leading-relaxed text-gray-600">
+            <p
+              className="max-w-md mx-auto text-xl md:text-2xl font-semibold font-montserrat tracking-wide leading-relaxed text-gray-600"
+              style={{ fontFamily: 'var(--font-darker)' }}
+            >
               Select a league, choose two teams, and compare their next five fixtures to make your predictions
             </p>
           </div>

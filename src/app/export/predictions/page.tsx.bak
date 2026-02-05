@@ -1,7 +1,6 @@
-
 'use client'
 
-import React, { useMemo, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import PredictiveFixtureCard, { FixtureData, PredictionType } from '@/components/PredictiveFixtureCard'
 
@@ -39,53 +38,13 @@ const ExportPredictionsPage: React.FC = () => {
     }
   }, [dataB64]) as any
 
-  // Step 1 diagnostics: log totals as-is and coerced
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[export] payload.totals:', (payload as any)?.totals)
-    // eslint-disable-next-line no-console
-    console.log('[export] raw A/B:', (payload as any)?.totals?.A, (payload as any)?.totals?.B)
-    const nA = Number((payload as any)?.totals?.A)
-    const nB = Number((payload as any)?.totals?.B)
-    // eslint-disable-next-line no-console
-    console.log('[export] Number(A)/Number(B):', nA, nB)
-  }, [payload])
-
   const teamA: TeamLite | null = payload.teamA || null
   const teamB: TeamLite | null = payload.teamB || null
   const fixturesA: FixtureData[] = (payload.fixturesA || []) as FixtureData[]
   const fixturesB: FixtureData[] = (payload.fixturesB || []) as FixtureData[]
   const predictions: Record<number, PredictionType> = payload.predictions || {}
-  const totals: { A?: unknown; B?: unknown } = payload.totals || {}
+  const totals: { A?: number; B?: number } = payload.totals || {}
   const baseTotals: { A?: number; B?: number } = payload.baseTotals || {}
-  const projectedA = (() => { const n = Number((totals as any)?.A); return Number.isFinite(n) ? n : undefined })()
-  const projectedB = (() => { const n = Number((totals as any)?.B); return Number.isFinite(n) ? n : undefined })()
-
-  const leadText = useMemo(() => {
-    if (typeof projectedA !== 'number' || typeof projectedB !== 'number') return ''
-    const diff = projectedA - projectedB
-    if (diff === 0) return 'Level on points'
-    const leader = diff > 0 ? (teamA?.name || 'Team A') : (teamB?.name || 'Team B')
-    const by = Math.abs(diff)
-    return `${leader} leads by ${by} point${by === 1 ? '' : 's'}`
-  }, [projectedA, projectedB, teamA?.name, teamB?.name])
-
-  // Additional diagnostics: check if summary row exists and fits inside the 1200x630 frame
-  useEffect(() => {
-    if (typeof projectedA !== 'number' || typeof projectedB !== 'number') return
-    const root = document.getElementById('export-root')
-    const row = document.getElementById('summary-row')
-    if (!root || !row) {
-      // eslint-disable-next-line no-console
-      console.log('[export] summary-row missing or root missing', { hasRoot: !!root, hasRow: !!row })
-      return
-    }
-    const rRect = (root as HTMLElement).getBoundingClientRect()
-    const sRect = (row as HTMLElement).getBoundingClientRect()
-    const fits = sRect.bottom <= rRect.bottom
-    // eslint-disable-next-line no-console
-    console.log('[export] frame bottom:', rRect.bottom, 'summary bottom:', sRect.bottom, 'fits:', fits)
-  }, [projectedA, projectedB])
 
   // Watermark
   const Watermark = () => (
@@ -109,16 +68,16 @@ const ExportPredictionsPage: React.FC = () => {
     <div
       id="export-root"
       className="relative"
-      style={{ width: 1200, height: 630, background: 'linear-gradient(135deg, #a78bfa 0%, #e9d5ff 55%, #f3e8ff 100%)', transform: 'translateY(-20px) scale(1.07)', transformOrigin: 'top center' }}
+      style={{ width: 1200, height: 630, background: 'linear-gradient(135deg, #a78bfa 0%, #e9d5ff 55%, #f3e8ff 100%)' }}
     >
       <div className="absolute inset-0 p-5 flex flex-col">
 
         {/* Teams and Summary row (no large white panel; keep background purple) */}
-        <div className="p-4 flex-1 relative">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0 px-[10%]">
+        <div className="p-4 flex-1">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0">
             {/* Team A summary */}
-            <div className="flex justify-start">
-              <div className="bg-white rounded-xl border border-gray-200 shadow px-1 py-1.5 pr-1 flex items-center justify-start w-full">
+            <div className="flex justify-center">
+              <div className="bg-white rounded-xl border border-gray-200 shadow px-1 py-1.5 pr-1 flex items-center justify-start w-[80%]">
                 <div className="flex items-center min-w-0">
                   {teamA?.logo ? (
                     <img src={teamA.logo} alt={`${teamA.name} crest`} className="w-6 h-6 object-contain mr-1 shrink-0" loading="eager" />
@@ -152,8 +111,8 @@ const ExportPredictionsPage: React.FC = () => {
             </div>
 
             {/* Team B summary */}
-            <div className="flex justify-end">
-              <div className="bg-white rounded-xl border border-gray-200 shadow px-1 py-1.5 pr-1 flex items-center justify-start w-full">
+            <div className="flex justify-center">
+              <div className="bg-white rounded-xl border border-gray-200 shadow px-1 py-1.5 pr-1 flex items-center justify-start w-[80%]">
                 <div className="flex items-center min-w-0">
                   {teamB?.logo ? (
                     <img src={teamB.logo} alt={`${teamB.name} crest`} className="w-6 h-6 object-contain mr-1 shrink-0" loading="eager" />
@@ -189,28 +148,6 @@ const ExportPredictionsPage: React.FC = () => {
                   teamLogo={teamA?.logo}
                 />
               ))}
-              {Number.isFinite((totals as any)?.A) && (
-                <div id="summary-card-left" className="mt-2">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2 flex items-center w-full">
-                    <div className="flex items-center min-w-0">
-                      {teamA?.logo ? (
-                        <img src={teamA.logo} alt={`${teamA?.name || 'Team A'} crest`} className="w-4 h-4 object-contain mr-2 shrink-0" loading="eager" />
-                      ) : (
-                        <div className="w-4 h-4 mr-2 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-[10px] shrink-0">
-                          {(teamA?.name?.trim()?.charAt(0) || 'U').toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex items-baseline gap-2">
-                        <div className="font-semibold text-gray-900 truncate leading-tight text-[12px]" title={teamA?.name}>{teamA?.name || 'Team A'}</div>
-                        <div className="text-[12px] text-gray-500 leading-tight">Projected points</div>
-                      </div>
-                    </div>
-                    <div className="text-right ml-auto pl-2">
-                      <div className="text-primary-600 font-montserrat font-extrabold text-[20px] leading-none">{projectedA}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
             <div className="space-y-2">
               {fixturesB.slice(0, 5).map(fx => (
@@ -223,28 +160,6 @@ const ExportPredictionsPage: React.FC = () => {
                   teamLogo={teamB?.logo}
                 />
               ))}
-              {Number.isFinite((totals as any)?.B) && (
-                <div id="summary-card-right" className="mt-2">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-2 flex items-center w-full">
-                    <div className="flex items-center min-w-0">
-                      {teamB?.logo ? (
-                        <img src={teamB.logo} alt={`${teamB?.name || 'Team B'} crest`} className="w-4 h-4 object-contain mr-2 shrink-0" loading="eager" />
-                      ) : (
-                        <div className="w-4 h-4 mr-2 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-[10px] shrink-0">
-                          {(teamB?.name?.trim()?.charAt(0) || 'U').toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex items-baseline gap-2">
-                        <div className="font-semibold text-gray-900 truncate leading-tight text-[12px]" title={teamB?.name}>{teamB?.name || 'Team B'}</div>
-                        <div className="text-[12px] text-gray-500 leading-tight">Projected points</div>
-                      </div>
-                    </div>
-                    <div className="text-right ml-auto pl-2">
-                      <div className="text-primary-600 font-montserrat font-extrabold text-[20px] leading-none">{projectedB}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
           {/* Bottom summary removed to ensure 5 fixture rows fit fully */}
@@ -252,7 +167,6 @@ const ExportPredictionsPage: React.FC = () => {
 
         {/* Watermark removed to free vertical space */}
       </div>
-      {/* overlay moved inside fixtures parent for alignment */}
     </div>
   )
 }

@@ -5,7 +5,11 @@ export default function Header() {
         <div className="flex items-center justify-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <span className="text-3xl font-bold font-montserrat bg-accent-gradient bg-clip-text text-transparent">Fixture Compare</span>
+            <img
+              src="/fixture-compare-logo.jpg"
+              alt="Fixture Compare Logo"
+              className="h-10 w-auto md:h-12"
+            />
           </div>
         </div>
       </div>
