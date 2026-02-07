@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server'
+import chromium from '@sparticuz/chromium'
+import puppeteer from 'puppeteer-core'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,41 +33,12 @@ function validateParams(params: URLSearchParams) {
 }
 
 async function launchBrowser() {
-  const isVercel = !!process.env.VERCEL
-  const puppeteer = await import('puppeteer-core')
-  if (isVercel) {
-    const chromium = (await import('@sparticuz/chromium')).default
-    const executablePath = await chromium.executablePath()
-    return puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: { width: 1200, height: 630, deviceScaleFactor: 2 },
-      executablePath,
-      headless: chromium.headless,
-    })
-  }
-
-  // Local dev: prefer system Chrome to avoid CfT/macOS framework issues
-  const { access } = await import('fs/promises')
-  const candidates = [
-    process.env.CHROME_PATH,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
-  ].filter(Boolean) as string[]
-  for (const p of candidates) {
-    try {
-      await access(p!)
-      return puppeteer.launch({
-        executablePath: p!,
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: { width: 1200, height: 630, deviceScaleFactor: 2 },
-      })
-    } catch {}
-  }
-
-  throw new Error(
-    'No usable Chrome found locally. Install Google Chrome or set CHROME_PATH to your Chrome executable, or run on Vercel where headless Chromium is provided.'
-  )
+  // Launch exactly as recommended for Vercel serverless
+  return puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+  })
 }
 
 export async function GET(req: NextRequest) {
