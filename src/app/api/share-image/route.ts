@@ -34,9 +34,12 @@ function validateParams(params: URLSearchParams) {
 
 async function launchBrowser() {
   // Launch exactly as recommended for Vercel serverless
+  const executablePath = await chromium.executablePath({
+    brotliPath: `${process.cwd()}/node_modules/@sparticuz/chromium/bin`,
+  })
   return puppeteer.launch({
     args: chromium.args,
-    executablePath: await chromium.executablePath(),
+    executablePath,
     headless: chromium.headless,
   })
 }
