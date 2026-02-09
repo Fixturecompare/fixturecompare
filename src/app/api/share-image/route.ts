@@ -33,14 +33,17 @@ function validateParams(params: URLSearchParams) {
 }
 
 async function launchBrowser() {
+  chromium.setHeadlessMode = true
+  chromium.setGraphicsMode = false
+
   const executablePath = await chromium.executablePath({
-    brotliPath: '/var/task/node_modules/@sparticuz/chromium/bin',
+    brotliPath: `${process.cwd()}/node_modules/@sparticuz/chromium/bin`,
   })
 
   return puppeteer.launch({
     args: chromium.args,
     executablePath,
-    headless: true,
+    headless: chromium.headless,
   })
 }
 
