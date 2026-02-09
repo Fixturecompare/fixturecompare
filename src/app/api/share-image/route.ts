@@ -33,12 +33,14 @@ function validateParams(params: URLSearchParams) {
 }
 
 async function launchBrowser() {
-  const executablePath = await chromium.executablePath()
+  const executablePath = await chromium.executablePath({
+    brotliPath: '/var/task/node_modules/@sparticuz/chromium/bin',
+  })
 
   return puppeteer.launch({
     args: chromium.args,
     executablePath,
-    headless: chromium.headless,
+    headless: true,
   })
 }
 
