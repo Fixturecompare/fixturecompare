@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import chromium from '@sparticuz/chromium'
-import puppeteer from 'puppeteer-core'
+import puppeteer from "puppeteer-core"
+import chromium from "@sparticuz/chromium"
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,9 +33,6 @@ function validateParams(params: URLSearchParams) {
 }
 
 async function launchBrowser() {
-  process.env.CHROMIUM_BROTLI_PATH =
-    `${process.cwd()}/node_modules/@sparticuz/chromium/bin`
-
   const executablePath = await chromium.executablePath()
 
   return puppeteer.launch({
