@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import puppeteer from 'puppeteer-core'
 import chromium from '@sparticuz/chromium'
-import path from 'path'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,11 +20,8 @@ function getOrigin(req: NextRequest): string {
 
 async function launchBrowser() {
   if (isVercel) {
-    // Resolve the package location inside the bundled Lambda, then derive bin
-    const pkgPath = require.resolve('@sparticuz/chromium')
-    const brotliPath = path.join(path.dirname(pkgPath), 'bin')
-
-    const executablePath = await chromium.executablePath({ brotliPath })
+    // ✅ Production (Vercel Lambda)
+    const executablePath = await chromium.executablePath()
 
     return puppeteer.launch({
       args: [
@@ -38,6 +34,7 @@ async function launchBrowser() {
     })
   }
 
+  // ✅ Local development (macOS system Chrome)
   return puppeteer.launch({
     executablePath:
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -75,8 +72,10 @@ export async function GET(req: NextRequest) {
 
     await page.waitForSelector('#export-root', { timeout: 30000 })
 
+    // Normalize layout to exact OG size
     await page.evaluate(() => {
       const el = document.getElementById('export-root') as HTMLElement | null
+
       if (el) {
         el.style.width = '1200px'
         el.style.height = '630px'
