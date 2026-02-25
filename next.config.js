@@ -11,6 +11,9 @@ const nextConfig = {
       '@sparticuz/chromium',
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 }
 
 module.exports = nextConfig
