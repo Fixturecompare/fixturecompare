@@ -21,11 +21,6 @@ function getOrigin(req: NextRequest): string {
 
 async function launchBrowser() {
   if (isVercel) {
-    /**
-     * 🔧 Explicit brotliPath fix for Vercel
-     * This ensures Sparticuz can locate the bundled chromium binaries
-     * inside the serverless function.
-     */
     const brotliPath = path.join(
       process.cwd(),
       'node_modules',
@@ -34,9 +29,7 @@ async function launchBrowser() {
       'bin'
     )
 
-    const executablePath = await chromium.executablePath({
-      brotliPath,
-    })
+    const executablePath = await chromium.executablePath(brotliPath)
 
     return puppeteer.launch({
       args: [
@@ -49,7 +42,6 @@ async function launchBrowser() {
     })
   }
 
-  // Local (Mac)
   return puppeteer.launch({
     executablePath:
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -65,7 +57,6 @@ export async function GET(req: NextRequest) {
 
   const exportUrl = new URL('/export/predictions', origin)
 
-  // Forward all query params
   params.forEach((value, key) => {
     exportUrl.searchParams.set(key, value)
   })
@@ -88,7 +79,6 @@ export async function GET(req: NextRequest) {
 
     await page.waitForSelector('#export-root', { timeout: 30000 })
 
-    // Normalize layout to exact OG size
     await page.evaluate(() => {
       const el = document.getElementById('export-root') as HTMLElement | null
       if (el) {
@@ -128,7 +118,6 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': cacheHeader,
-        // Always auto-download
         'Content-Disposition':
           'attachment; filename="fixture-share.png"',
       },
