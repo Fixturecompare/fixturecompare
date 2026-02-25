@@ -13,9 +13,9 @@
     "@sparticuz/chromium": "^143.0.4",
     "@vercel/og": "^0.6.3",
     "next": "14.0.3",
+    "puppeteer-core": "^21.7.0",
     "react": "^18",
-    "react-dom": "^18",
-    "puppeteer-core": "^24.37.1"
+    "react-dom": "^18"
   },
   "devDependencies": {
     "@types/node": "^20",
