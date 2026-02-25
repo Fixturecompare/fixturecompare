@@ -2,10 +2,14 @@
 const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
-      '/api/share-image': [
-        './node_modules/@sparticuz/chromium/bin/**',
+      'app/api/share-image': [
+        './node_modules/@sparticuz/chromium/**',
       ],
     },
+    serverComponentsExternalPackages: [
+      'puppeteer-core',
+      '@sparticuz/chromium',
+    ],
   },
 }
 
