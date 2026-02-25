@@ -21,15 +21,11 @@ function getOrigin(req: NextRequest): string {
 
 async function launchBrowser() {
   if (isVercel) {
-    const brotliPath = path.join(
-      process.cwd(),
-      'node_modules',
-      '@sparticuz',
-      'chromium',
-      'bin'
-    )
+    // Resolve the package location inside the bundled Lambda, then derive bin
+    const pkgPath = require.resolve('@sparticuz/chromium')
+    const brotliPath = path.join(path.dirname(pkgPath), 'bin')
 
-    const executablePath = await chromium.executablePath(brotliPath)
+    const executablePath = await chromium.executablePath({ brotliPath })
 
     return puppeteer.launch({
       args: [
