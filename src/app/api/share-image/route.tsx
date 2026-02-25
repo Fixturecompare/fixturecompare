@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import puppeteer from 'puppeteer-core'
 import chromium from '@sparticuz/chromium'
+import path from 'path'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,22 @@ function getOrigin(req: NextRequest): string {
 
 async function launchBrowser() {
   if (isVercel) {
-    const executablePath = await chromium.executablePath()
+    /**
+     * 🔧 Explicit brotliPath fix for Vercel
+     * This ensures Sparticuz can locate the bundled chromium binaries
+     * inside the serverless function.
+     */
+    const brotliPath = path.join(
+      process.cwd(),
+      'node_modules',
+      '@sparticuz',
+      'chromium',
+      'bin'
+    )
+
+    const executablePath = await chromium.executablePath({
+      brotliPath,
+    })
 
     return puppeteer.launch({
       args: [
@@ -49,7 +65,7 @@ export async function GET(req: NextRequest) {
 
   const exportUrl = new URL('/export/predictions', origin)
 
-  // Forward all params
+  // Forward all query params
   params.forEach((value, key) => {
     exportUrl.searchParams.set(key, value)
   })
@@ -66,14 +82,13 @@ export async function GET(req: NextRequest) {
       deviceScaleFactor: 2,
     })
 
-    // Safer for Vercel (ensures fonts/images load)
     await page.goto(exportUrl.toString(), {
       waitUntil: 'networkidle0',
     })
 
     await page.waitForSelector('#export-root', { timeout: 30000 })
 
-    // Normalize layout for perfect OG sizing
+    // Normalize layout to exact OG size
     await page.evaluate(() => {
       const el = document.getElementById('export-root') as HTMLElement | null
       if (el) {
@@ -105,7 +120,6 @@ export async function GET(req: NextRequest) {
       type: 'png',
     })) as Buffer
 
-    // CDN caching in production, no-store locally
     const cacheHeader = isVercel
       ? 'public, s-maxage=86400, stale-while-revalidate=604800'
       : 'no-store'
@@ -114,7 +128,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': cacheHeader,
-        // 🔥 Always auto-download
+        // Always auto-download
         'Content-Disposition':
           'attachment; filename="fixture-share.png"',
       },
