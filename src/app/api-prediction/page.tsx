@@ -26,8 +26,7 @@ interface ApiTeamFixturesProps {
 }
 
 const ApiTeamFixtures = ({ team, teamId, title, predictions, onPredictionChange }: ApiTeamFixturesProps) => {
-  const { fixtures, loading, error, refetch } = useFixtures(teamId)
-
+const { fixtures, loading, error, refetch } = useFixtures(teamId) as any
   if (!team) {
     return (
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
