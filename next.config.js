@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     outputFileTracingIncludes: {
-      'app/api/share-image': [
+      'src/app/api/share-image': [
         './node_modules/@sparticuz/chromium/**',
       ],
     },
