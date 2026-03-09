@@ -77,7 +77,25 @@ const ApiTeamFixtures = ({ team, teamId, title, predictions, onPredictionChange 
         </div>
       ) : (
         <div className="space-y-6">
-          {fixtures.map((fixture, index) => {
+          {fixtures.map((fixture: any, index: number) => {
+            // Normalize API status to component union type
+            const rawStatus = String(fixture.status || '').toUpperCase()
+            const statusMap: Record<string, 'upcoming' | 'live' | 'finished'> = {
+              SCHEDULED: 'upcoming',
+              TIMED: 'upcoming',
+              POSTPONED: 'upcoming',
+              CANCELLED: 'upcoming',
+              SUSPENDED: 'upcoming',
+              IN_PLAY: 'live',
+              PAUSED: 'live',
+              LIVE: 'live',
+              FINISHED: 'finished',
+              FT: 'finished',
+              AET: 'finished',
+              PEN: 'finished',
+            }
+            const uiStatus: 'upcoming' | 'live' | 'finished' = statusMap[rawStatus] ?? 'upcoming'
+
             // Transform API fixture to our component format
             const transformedFixture = {
               id: fixture.id,
@@ -90,7 +108,7 @@ const ApiTeamFixtures = ({ team, teamId, title, predictions, onPredictionChange 
                 minute: '2-digit' 
               }),
               league: fixture.competition.name,
-              status: fixture.status.toLowerCase()
+              status: uiStatus,
             }
 
             return (
