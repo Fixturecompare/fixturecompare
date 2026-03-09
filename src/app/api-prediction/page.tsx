@@ -151,7 +151,7 @@ export default function ApiPredictionPage() {
   )
 
   // Handle league change
-  const handleLeagueChange = (league) => {
+  const handleLeagueChange = (league: string) => {
     setSelectedLeague(league)
     setSelectedTeamA(null)
     setSelectedTeamB(null)
