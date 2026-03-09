@@ -159,7 +159,7 @@ export default function ApiPredictionPage() {
   }
 
   // Handle prediction change
-  const handlePredictionChange = (fixtureId, prediction) => {
+  const handlePredictionChange = (fixtureId: number, prediction: PredictionType) => {
     setPredictions(prev => ({
       ...prev,
       [fixtureId]: prediction
