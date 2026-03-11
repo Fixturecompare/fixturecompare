@@ -131,7 +131,7 @@ const ApiTeamFixtures = ({ team, teamId, title, predictions, onPredictionChange 
 
 // Main API Prediction Page Component
 export default function ApiPredictionPage() {
-  const [selectedLeague, setSelectedLeague] = useState('PL')
+  const [selectedLeague, setSelectedLeague] = useState<keyof typeof leagues>('PL')
   const [selectedTeamA, setSelectedTeamA] = useState<number | null>(null)
   const [selectedTeamB, setSelectedTeamB] = useState<number | null>(null)
   const [predictions, setPredictions] = useState<Record<number, PredictionType>>({})
@@ -151,7 +151,7 @@ export default function ApiPredictionPage() {
   )
 
   // Handle league change
-  const handleLeagueChange = (league: string) => {
+  const handleLeagueChange = (league: keyof typeof leagues) => {
     setSelectedLeague(league)
     setSelectedTeamA(null)
     setSelectedTeamB(null)
